@@ -1,0 +1,3919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxia Gateway - Server-Side Executor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: black;
+            color: white;
+            line-height: 1.6;
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* 3D Background */
+        .background-3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+
+        /* Custom Dropdown Styles */
+        .custom-dropdown-trigger {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, rgba(55, 65, 81, 0.5), rgba(75, 85, 99, 0.5));
+            backdrop-filter: blur(10px);
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            color: inherit;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .custom-dropdown-trigger::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .custom-dropdown-trigger:hover::before {
+            left: 100%;
+        }
+
+        .custom-dropdown-trigger:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(75, 85, 99, 0.6), rgba(107, 114, 128, 0.6));
+        }
+
+        .custom-dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            min-width: 220px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            margin-top: 0.5rem;
+            overflow: hidden;
+            animation: dropdownSlide 0.3s ease-out;
+        }
+
+        .custom-dropdown-content.show {
+            display: block;
+        }
+
+        .custom-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 1rem 1.25rem;
+            background: transparent;
+            border: none;
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .custom-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .custom-dropdown-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transition: left 0.3s ease;
+        }
+
+        .custom-dropdown-item:hover::before {
+            left: 100%;
+        }
+
+        .custom-dropdown-item:hover {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            transform: translateX(5px);
+        }
+
+        .theme-color-indicator {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            flex-shrink: 0;
+        }
+
+        .animation-icon {
+            width: 1.2rem;
+            height: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .chevron-icon {
+            width: 1rem;
+            height: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .chevron-icon.rotated {
+            transform: rotate(180deg);
+        }
+
+        @keyframes dropdownSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 3D Animation Elements */
+        .cube-3d {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            transform-style: preserve-3d;
+            animation: float3d 15s infinite linear;
+        }
+
+        .cube-face {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .cube-face.front { transform: rotateY(0deg) translateZ(20px); }
+        .cube-face.back { transform: rotateY(180deg) translateZ(20px); }
+        .cube-face.right { transform: rotateY(90deg) translateZ(20px); }
+        .cube-face.left { transform: rotateY(-90deg) translateZ(20px); }
+        .cube-face.top { transform: rotateX(90deg) translateZ(20px); }
+        .cube-face.bottom { transform: rotateX(-90deg) translateZ(20px); }
+
+        .line-3d {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: moveLine3d 12s infinite linear;
+        }
+
+        .particle-3d {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent);
+            animation: particleFloat 10s infinite linear;
+        }
+
+        .wave-3d {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            border-radius: 50px;
+            animation: waveMove 8s infinite linear;
+        }
+
+        .matrix-column {
+            position: absolute;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 20px;
+            color: rgba(0, 255, 0, 0.8);
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+            animation: matrixFall 15s infinite linear;
+        }
+
+        /* New Animation Elements */
+        .spiral-3d {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: spiralMove 20s infinite linear;
+        }
+
+        .diamond-3d {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: rotate(45deg);
+            animation: diamondFloat 18s infinite linear;
+        }
+
+        .orb-3d {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.1));
+            animation: orbFloat 14s infinite linear;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .triangle-3d {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 26px solid rgba(255, 255, 255, 0.1);
+            animation: triangleMove 16s infinite linear;
+        }
+
+        .hexagon-3d {
+            position: absolute;
+            width: 40px;
+            height: 35px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            animation: hexagonFloat 22s infinite linear;
+        }
+
+        .star-3d {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            animation: starFloat 19s infinite linear;
+        }
+
+        .ring-3d {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border-top-color: transparent;
+            border-right-color: transparent;
+            animation: ringRotate 13s infinite linear;
+        }
+
+        /* Theme Classes */
+        body.theme-default {
+            background-color: black;
+            color: white;
+        }
+
+        body.theme-blue {
+            background-color: #0a0e1a;
+            color: #ffffff;
+        }
+
+        body.theme-blue .cube-face,
+        body.theme-blue .spiral-3d,
+        body.theme-blue .diamond-3d,
+        body.theme-blue .hexagon-3d {
+            border-color: rgba(59, 130, 246, 0.3);
+            background: rgba(59, 130, 246, 0.05);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+        }
+
+        body.theme-blue .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.4), transparent);
+        }
+
+        body.theme-blue .particle-3d,
+        body.theme-blue .orb-3d {
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.8), transparent);
+        }
+
+        body.theme-neon {
+            background-color: #000000;
+            color: #00ff00;
+        }
+
+        body.theme-neon .cube-face,
+        body.theme-neon .spiral-3d,
+        body.theme-neon .diamond-3d,
+        body.theme-neon .hexagon-3d {
+            border-color: rgba(0, 255, 0, 0.3);
+            background: rgba(0, 255, 0, 0.05);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+        }
+
+        body.theme-neon .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.4), transparent);
+        }
+
+        body.theme-neon .particle-3d,
+        body.theme-neon .orb-3d {
+            background: radial-gradient(circle, rgba(0, 255, 0, 0.8), transparent);
+        }
+
+        body.theme-purple {
+            background-color: #1a0a1a;
+            color: #ffffff;
+        }
+
+        body.theme-purple .cube-face,
+        body.theme-purple .spiral-3d,
+        body.theme-purple .diamond-3d,
+        body.theme-purple .hexagon-3d {
+            border-color: rgba(168, 85, 247, 0.3);
+            background: rgba(168, 85, 247, 0.05);
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.1);
+        }
+
+        body.theme-purple .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.4), transparent);
+        }
+
+        body.theme-purple .particle-3d,
+        body.theme-purple .orb-3d {
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.8), transparent);
+        }
+
+        body.theme-red {
+            background-color: #1a0505;
+            color: #ffffff;
+        }
+
+        body.theme-red .cube-face,
+        body.theme-red .spiral-3d,
+        body.theme-red .diamond-3d,
+        body.theme-red .hexagon-3d {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.05);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+        }
+
+        body.theme-red .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.4), transparent);
+        }
+
+        body.theme-red .particle-3d,
+        body.theme-red .orb-3d {
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.8), transparent);
+        }
+
+        body.theme-orange {
+            background-color: #1a0f05;
+            color: #ffffff;
+        }
+
+        body.theme-orange .cube-face,
+        body.theme-orange .spiral-3d,
+        body.theme-orange .diamond-3d,
+        body.theme-orange .hexagon-3d {
+            border-color: rgba(249, 115, 22, 0.3);
+            background: rgba(249, 115, 22, 0.05);
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.1);
+        }
+
+        body.theme-orange .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.4), transparent);
+        }
+
+        body.theme-orange .particle-3d,
+        body.theme-orange .orb-3d {
+            background: radial-gradient(circle, rgba(249, 115, 22, 0.8), transparent);
+        }
+
+        body.theme-cyan {
+            background-color: #051a1a;
+            color: #ffffff;
+        }
+
+        body.theme-cyan .cube-face,
+        body.theme-cyan .spiral-3d,
+        body.theme-cyan .diamond-3d,
+        body.theme-cyan .hexagon-3d {
+            border-color: rgba(6, 182, 212, 0.3);
+            background: rgba(6, 182, 212, 0.05);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.1);
+        }
+
+        body.theme-cyan .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.4), transparent);
+        }
+
+        body.theme-cyan .particle-3d,
+        body.theme-cyan .orb-3d {
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.8), transparent);
+        }
+
+        body.theme-pink {
+            background-color: #1a051a;
+            color: #ffffff;
+        }
+
+        body.theme-pink .cube-face,
+        body.theme-pink .spiral-3d,
+        body.theme-pink .diamond-3d,
+        body.theme-pink .hexagon-3d {
+            border-color: rgba(236, 72, 153, 0.3);
+            background: rgba(236, 72, 153, 0.05);
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.1);
+        }
+
+        body.theme-pink .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(236, 72, 153, 0.4), transparent);
+        }
+
+        body.theme-pink .particle-3d,
+        body.theme-pink .orb-3d {
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.8), transparent);
+        }
+
+        body.theme-gold {
+            background-color: #1a1505;
+            color: #ffffff;
+        }
+
+        body.theme-gold .cube-face,
+        body.theme-gold .spiral-3d,
+        body.theme-gold .diamond-3d,
+        body.theme-gold .hexagon-3d {
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.05);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+        }
+
+        body.theme-gold .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent);
+        }
+
+        body.theme-gold .particle-3d,
+        body.theme-gold .orb-3d {
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.8), transparent);
+        }
+
+        /* New Theme Classes */
+        body.theme-emerald {
+            background-color: #051a0f;
+            color: #ffffff;
+        }
+
+        body.theme-emerald .cube-face,
+        body.theme-emerald .spiral-3d,
+        body.theme-emerald .diamond-3d,
+        body.theme-emerald .hexagon-3d {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.05);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+        }
+
+        body.theme-emerald .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.4), transparent);
+        }
+
+        body.theme-emerald .particle-3d,
+        body.theme-emerald .orb-3d {
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.8), transparent);
+        }
+
+        body.theme-indigo {
+            background-color: #0f0a1a;
+            color: #ffffff;
+        }
+
+        body.theme-indigo .cube-face,
+        body.theme-indigo .spiral-3d,
+        body.theme-indigo .diamond-3d,
+        body.theme-indigo .hexagon-3d {
+            border-color: rgba(99, 102, 241, 0.3);
+            background: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.1);
+        }
+
+        body.theme-indigo .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.4), transparent);
+        }
+
+        body.theme-indigo .particle-3d,
+        body.theme-indigo .orb-3d {
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.8), transparent);
+        }
+
+        body.theme-rose {
+            background-color: #1a0510;
+            color: #ffffff;
+        }
+
+        body.theme-rose .cube-face,
+        body.theme-rose .spiral-3d,
+        body.theme-rose .diamond-3d,
+        body.theme-rose .hexagon-3d {
+            border-color: rgba(244, 63, 94, 0.3);
+            background: rgba(244, 63, 94, 0.05);
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.1);
+        }
+
+        body.theme-rose .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(244, 63, 94, 0.4), transparent);
+        }
+
+        body.theme-rose .particle-3d,
+        body.theme-rose .orb-3d {
+            background: radial-gradient(circle, rgba(244, 63, 94, 0.8), transparent);
+        }
+
+        body.theme-teal {
+            background-color: #051a1a;
+            color: #ffffff;
+        }
+
+        body.theme-teal .cube-face,
+        body.theme-teal .spiral-3d,
+        body.theme-teal .diamond-3d,
+        body.theme-teal .hexagon-3d {
+            border-color: rgba(20, 184, 166, 0.3);
+            background: rgba(20, 184, 166, 0.05);
+            box-shadow: 0 0 10px rgba(20, 184, 166, 0.1);
+        }
+
+        body.theme-teal .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(20, 184, 166, 0.4), transparent);
+        }
+
+        body.theme-teal .particle-3d,
+        body.theme-teal .orb-3d {
+            background: radial-gradient(circle, rgba(20, 184, 166, 0.8), transparent);
+        }
+
+        body.theme-lime {
+            background-color: #0f1a05;
+            color: #ffffff;
+        }
+
+        body.theme-lime .cube-face,
+        body.theme-lime .spiral-3d,
+        body.theme-lime .diamond-3d,
+        body.theme-lime .hexagon-3d {
+            border-color: rgba(132, 204, 22, 0.3);
+            background: rgba(132, 204, 22, 0.05);
+            box-shadow: 0 0 10px rgba(132, 204, 22, 0.1);
+        }
+
+        body.theme-lime .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(132, 204, 22, 0.4), transparent);
+        }
+
+        body.theme-lime .particle-3d,
+        body.theme-lime .orb-3d {
+            background: radial-gradient(circle, rgba(132, 204, 22, 0.8), transparent);
+        }
+
+        body.theme-amber {
+            background-color: #1a1505;
+            color: #ffffff;
+        }
+
+        body.theme-amber .cube-face,
+        body.theme-amber .spiral-3d,
+        body.theme-amber .diamond-3d,
+        body.theme-amber .hexagon-3d {
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.05);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+        }
+
+        body.theme-amber .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent);
+        }
+
+        body.theme-amber .particle-3d,
+        body.theme-amber .orb-3d {
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.8), transparent);
+        }
+
+        body.theme-violet {
+            background-color: #1a051a;
+            color: #ffffff;
+        }
+
+        body.theme-violet .cube-face,
+        body.theme-violet .spiral-3d,
+        body.theme-violet .diamond-3d,
+        body.theme-violet .hexagon-3d {
+            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(139, 92, 246, 0.05);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
+        }
+
+        body.theme-violet .line-3d {
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+        }
+
+        body.theme-violet .particle-3d,
+        body.theme-violet .orb-3d {
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.8), transparent);
+        }
+
+        /* Animation Keyframes - NO DELAYS, IMMEDIATE START */
+        @keyframes float3d {
+            0% {
+                transform: translateX(-100px) translateY(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 100px)) translateY(-200px) rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes moveLine3d {
+            0% {
+                transform: translateX(-200px) translateY(0px) rotateZ(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 200px)) translateY(-100px) rotateZ(180deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes particleFloat {
+            0% {
+                transform: translateX(-20px) translateY(0px) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 20px)) translateY(-300px) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes waveMove {
+            0% {
+                transform: translateX(-100%) scaleY(0.5);
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateX(100%) scaleY(1.5);
+                opacity: 0.3;
+            }
+        }
+
+        @keyframes matrixFall {
+            0% {
+                transform: translateY(-100vh);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 1;
+            }
+        }
+
+        @keyframes spiralMove {
+            0% {
+                transform: translateX(-100px) translateY(0px) rotate(0deg) scale(0.5);
+                opacity: 1;
+            }
+            50% {
+                transform: translateX(50vw) translateY(-150px) rotate(180deg) scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 100px)) translateY(-300px) rotate(360deg) scale(0.5);
+                opacity: 1;
+            }
+        }
+
+        @keyframes diamondFloat {
+            0% {
+                transform: translateX(-50px) translateY(0px) rotate(45deg) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 50px)) translateY(-250px) rotate(405deg) scale(1.5);
+                opacity: 1;
+            }
+        }
+
+        @keyframes orbFloat {
+            0% {
+                transform: translateX(-30px) translateY(0px) scale(0.8);
+                opacity: 1;
+            }
+            50% {
+                transform: translateX(50vw) translateY(-100px) scale(1.3);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 30px)) translateY(-200px) scale(0.8);
+                opacity: 1;
+            }
+        }
+
+        @keyframes triangleMove {
+            0% {
+                transform: translateX(-40px) translateY(0px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 40px)) translateY(-180px) rotate(720deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes hexagonFloat {
+            0% {
+                transform: translateX(-60px) translateY(0px) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            33% {
+                transform: translateX(33vw) translateY(-80px) rotate(120deg) scale(1.1);
+                opacity: 1;
+            }
+            66% {
+                transform: translateX(66vw) translateY(-160px) rotate(240deg) scale(0.9);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 60px)) translateY(-240px) rotate(360deg) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes starFloat {
+            0% {
+                transform: translateX(-35px) translateY(0px) rotate(0deg) scale(0.7);
+                opacity: 1;
+            }
+            25% {
+                transform: translateX(25vw) translateY(-60px) rotate(90deg) scale(1.2);
+                opacity: 1;
+            }
+            75% {
+                transform: translateX(75vw) translateY(-120px) rotate(270deg) scale(0.9);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 35px)) translateY(-180px) rotate(360deg) scale(0.7);
+                opacity: 1;
+            }
+        }
+
+        @keyframes ringRotate {
+            0% {
+                transform: translateX(-50px) translateY(0px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(calc(100vw + 50px)) translateY(-150px) rotate(1080deg);
+                opacity: 1;
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header */
+        header {
+            border-bottom: 1px solid white;
+            background-color: rgba(0, 0, 0, 0.8);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+        }
+
+        body.theme-blue header { border-bottom-color: #2563eb; }
+        body.theme-neon header { border-bottom-color: #00ff00; }
+        body.theme-purple header { border-bottom-color: #8b5cf6; }
+        body.theme-red header { border-bottom-color: #ef4444; }
+        body.theme-orange header { border-bottom-color: #f97316; }
+        body.theme-cyan header { border-bottom-color: #06b6d4; }
+        body.theme-pink header { border-bottom-color: #ec4899; }
+        body.theme-gold header { border-bottom-color: #f59e0b; }
+        body.theme-emerald header { border-bottom-color: #10b981; }
+        body.theme-indigo header { border-bottom-color: #6366f1; }
+        body.theme-rose header { border-bottom-color: #f43f5e; }
+        body.theme-teal header { border-bottom-color: #14b8a6; }
+        body.theme-lime header { border-bottom-color: #84cc16; }
+        body.theme-amber header { border-bottom-color: #f59e0b; }
+        body.theme-violet header { border-bottom-color: #8b5cf6; }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-right: 4px; /* little space between logo and text */
+        }
+
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+        }
+
+        body.theme-blue .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(215deg) brightness(119%) contrast(119%); }
+        body.theme-neon .logo-icon img { filter: brightness(0) saturate(100%) invert(50%) sepia(96%) saturate(6143%) hue-rotate(92deg) brightness(118%) contrast(115%); }
+        body.theme-purple .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(262deg) brightness(119%) contrast(119%); }
+        body.theme-red .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(347deg) brightness(119%) contrast(119%); }
+        body.theme-orange .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(21deg) brightness(119%) contrast(119%); }
+        body.theme-cyan .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(158deg) brightness(119%) contrast(119%); }
+        body.theme-pink .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(300deg) brightness(119%) contrast(119%); }
+        body.theme-gold .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(35deg) brightness(119%) contrast(119%); }
+        body.theme-emerald .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(142deg) brightness(119%) contrast(119%); }
+        body.theme-indigo .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(230deg) brightness(119%) contrast(119%); }
+        body.theme-rose .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(320deg) brightness(119%) contrast(119%); }
+        body.theme-teal .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(160deg) brightness(119%) contrast(119%); }
+        body.theme-lime .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(65deg) brightness(119%) contrast(119%); }
+        body.theme-amber .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(35deg) brightness(119%) contrast(119%); }
+        body.theme-violet .logo-icon img { filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(262deg) brightness(119%) contrast(119%); }
+
+        .logo span {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: inherit;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        /* Dropdown containers */
+        .nav-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Icons */
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .icon-lg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 2rem;
+            border: 2px solid white;
+            background-color: transparent;
+            color: inherit;
+            text-decoration: none;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        body.theme-blue .btn { border-color: #2563eb; }
+        body.theme-neon .btn { border-color: #00ff00; }
+        body.theme-purple .btn { border-color: #8b5cf6; }
+        body.theme-red .btn { border-color: #ef4444; }
+        body.theme-orange .btn { border-color: #f97316; }
+        body.theme-cyan .btn { border-color: #06b6d4; }
+        body.theme-pink .btn { border-color: #ec4899; }
+        body.theme-gold .btn { border-color: #f59e0b; }
+        body.theme-emerald .btn { border-color: #10b981; }
+        body.theme-indigo .btn { border-color: #6366f1; }
+        body.theme-rose .btn { border-color: #f43f5e; }
+        body.theme-teal .btn { border-color: #14b8a6; }
+        body.theme-lime .btn { border-color: #84cc16; }
+        body.theme-amber .btn { border-color: #f59e0b; }
+        body.theme-violet .btn { border-color: #8b5cf6; }
+
+        .btn:hover {
+            background-color: white;
+            color: black;
+        }
+
+        body.theme-blue .btn:hover { background-color: #3b82f6; color: white; }
+        body.theme-neon .btn:hover { background-color: #00ff00; color: black; }
+        body.theme-purple .btn:hover { background-color: #a855f7; color: white; }
+        body.theme-red .btn:hover { background-color: #ef4444; color: white; }
+        body.theme-orange .btn:hover { background-color: #f97316; color: white; }
+        body.theme-cyan .btn:hover { background-color: #06b6d4; color: white; }
+        body.theme-pink .btn:hover { background-color: #ec4899; color: white; }
+        body.theme-gold .btn:hover { background-color: #f59e0b; color: white; }
+        body.theme-emerald .btn:hover { background-color: #10b981; color: white; }
+        body.theme-indigo .btn:hover { background-color: #6366f1; color: white; }
+        body.theme-rose .btn:hover { background-color: #f43f5e; color: white; }
+        body.theme-teal .btn:hover { background-color: #14b8a6; color: white; }
+        body.theme-lime .btn:hover { background-color: #84cc16; color: white; }
+        body.theme-amber .btn:hover { background-color: #f59e0b; color: white; }
+        body.theme-violet .btn:hover { background-color: #8b5cf6; color: white; }
+
+        .btn-lg {
+            padding: 1rem 3rem;
+            font-size: 1.125rem;
+        }
+
+        /* Sections */
+        section {
+            padding: 5rem 1rem;
+            position: relative;
+        }
+
+        .section-border {
+            border-top: 1px solid white;
+        }
+
+        body.theme-blue .section-border { border-top-color: #2563eb; }
+        body.theme-neon .section-border { border-top-color: #00ff00; }
+        body.theme-purple .section-border { border-top-color: #8b5cf6; }
+        body.theme-red .section-border { border-top-color: #ef4444; }
+        body.theme-orange .section-border { border-top-color: #f97316; }
+        body.theme-cyan .section-border { border-top-color: #06b6d4; }
+        body.theme-pink .section-border { border-top-color: #ec4899; }
+        body.theme-gold .section-border { border-top-color: #f59e0b; }
+        body.theme-emerald .section-border { border-top-color: #10b981; }
+        body.theme-indigo .section-border { border-top-color: #6366f1; }
+        body.theme-rose .section-border { border-top-color: #f43f5e; }
+        body.theme-teal .section-border { border-top-color: #14b8a6; }
+        body.theme-lime .section-border { border-top-color: #84cc16; }
+        body.theme-amber .section-border { border-top-color: #f59e0b; }
+        body.theme-violet .section-border { border-top-color: #8b5cf6; }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border: 1px solid white;
+            background-color: transparent;
+            color: inherit;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        body.theme-blue .badge { border-color: #2563eb; }
+        body.theme-neon .badge { border-color: #00ff00; }
+        body.theme-purple .badge { border-color: #8b5cf6; }
+        body.theme-red .badge { border-color: #ef4444; }
+        body.theme-orange .badge { border-color: #f97316; }
+        body.theme-cyan .badge { border-color: #06b6d4; }
+        body.theme-pink .badge { border-color: #ec4899; }
+        body.theme-gold .badge { border-color: #f59e0b; }
+        body.theme-emerald .badge { border-color: #10b981; }
+        body.theme-indigo .badge { border-color: #6366f1; }
+        body.theme-rose .badge { border-color: #f43f5e; }
+        body.theme-teal .badge { border-color: #14b8a6; }
+        body.theme-lime .badge { border-color: #84cc16; }
+        body.theme-amber .badge { border-color: #f59e0b; }
+        body.theme-violet .badge { border-color: #8b5cf6; }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: inherit;
+        }
+
+        body.theme-blue .hero h1 {
+            background: linear-gradient(45deg, #3b82f6, #1e40af);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-neon .hero h1 {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        body.theme-purple .hero h1 {
+            background: linear-gradient(45deg, #a855f7, #7c3aed);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-red .hero h1 {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-orange .hero h1 {
+            background: linear-gradient(45deg, #f97316, #ea580c);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-cyan .hero h1 {
+            background: linear-gradient(45deg, #06b6d4, #0891b2);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-pink .hero h1 {
+            background: linear-gradient(45deg, #ec4899, #db2777);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-gold .hero h1 {
+            background: linear-gradient(45deg, #f59e0b, #d97706);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-emerald .hero h1 {
+            background: linear-gradient(45deg, #10b981, #059669);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-indigo .hero h1 {
+            background: linear-gradient(45deg, #6366f1, #4f46e5);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-rose .hero h1 {
+            background: linear-gradient(45deg, #f43f5e, #e11d48);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-teal .hero h1 {
+            background: linear-gradient(45deg, #14b8a6, #0d9488);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-lime .hero h1 {
+            background: linear-gradient(45deg, #84cc16, #65a30d);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-amber .hero h1 {
+            background: linear-gradient(45deg, #f59e0b, #d97706);
+            
+            
+            background-clip: text;
+        }
+
+        body.theme-violet .hero h1 {
+            background: linear-gradient(45deg, #8b5cf6, #7c3aed);
+            
+            
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            max-width: 48rem;
+            margin-left: auto;
+            margin-right: auto;
+            color: inherit;
+        }
+
+        .hero-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* Pricing Section */
+        .pricing-section {
+            text-align: center;
+            padding: 5rem 1rem;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .pricing-card {
+            background-color: rgba(255,255,255,0.02);
+            border: 2px solid white;
+            border-radius: 1rem;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.theme-blue .pricing-card { border-color: #2563eb; background-color: rgba(59, 130, 246, 0.05); }
+        body.theme-neon .pricing-card { border-color: #00ff00; background-color: rgba(0, 255, 0, 0.05); }
+        body.theme-purple .pricing-card { border-color: #8b5cf6; background-color: rgba(168, 85, 247, 0.05); }
+        body.theme-red .pricing-card { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.05); }
+        body.theme-orange .pricing-card { border-color: #f97316; background-color: rgba(249, 115, 22, 0.05); }
+        body.theme-cyan .pricing-card { border-color: #06b6d4; background-color: rgba(6, 182, 212, 0.05); }
+        body.theme-pink .pricing-card { border-color: #ec4899; background-color: rgba(236, 72, 153, 0.05); }
+        body.theme-gold .pricing-card { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05); }
+        body.theme-emerald .pricing-card { border-color: #10b981; background-color: rgba(16, 185, 129, 0.05); }
+        body.theme-indigo .pricing-card { border-color: #6366f1; background-color: rgba(99, 102, 241, 0.05); }
+        body.theme-rose .pricing-card { border-color: #f43f5e; background-color: rgba(244, 63, 94, 0.05); }
+        body.theme-teal .pricing-card { border-color: #14b8a6; background-color: rgba(20, 184, 166, 0.05); }
+        body.theme-lime .pricing-card { border-color: #84cc16; background-color: rgba(132, 204, 22, 0.05); }
+        body.theme-amber .pricing-card { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05); }
+        body.theme-violet .pricing-card { border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05); }
+
+        .pricing-card:hover {
+            background-color: rgba(255,255,255,0.1);
+            transform: translateY(-5px);
+        }
+
+        .pricing-card.popular {
+            border-color: #f59e0b;
+            background-color: rgba(245, 158, 11, 0.1);
+        }
+
+        .pricing-card.popular::before {
+            content: 'POPULAR';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #f59e0b;
+            color: black;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .pricing-card h3 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: inherit;
+        }
+
+        .pricing-price {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: inherit;
+        }
+
+        body.theme-blue .pricing-price { color: #3b82f6; }
+        body.theme-neon .pricing-price { color: #00ff00; }
+        body.theme-purple .pricing-price { color: #a855f7; }
+        body.theme-red .pricing-price { color: #ef4444; }
+        body.theme-orange .pricing-price { color: #f97316; }
+        body.theme-cyan .pricing-price { color: #06b6d4; }
+        body.theme-pink .pricing-price { color: #ec4899; }
+        body.theme-gold .pricing-price { color: #f59e0b; }
+        body.theme-emerald .pricing-price { color: #10b981; }
+        body.theme-indigo .pricing-price { color: #6366f1; }
+        body.theme-rose .pricing-price { color: #f43f5e; }
+        body.theme-teal .pricing-price { color: #14b8a6; }
+        body.theme-lime .pricing-price { color: #84cc16; }
+        body.theme-amber .pricing-price { color: #f59e0b; }
+        body.theme-violet .pricing-price { color: #8b5cf6; }
+
+        .pricing-period {
+            font-size: 1rem;
+            opacity: 0.7;
+            margin-bottom: 2rem;
+        }
+
+        .pricing-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .pricing-features li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pricing-features li::before {
+            content: '✓';
+            color: #10b981;
+            font-weight: bold;
+            width: 1rem;
+        }
+
+        /* Executor Section */
+        .executor-section {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .executor-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            border: 2px solid white;
+            border-radius: 1rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        body.theme-blue .executor-container { border-color: #2563eb; background-color: rgba(10, 14, 26, 0.8); }
+        body.theme-neon .executor-container { border-color: #00ff00; background-color: rgba(0, 0, 0, 0.8); }
+        body.theme-purple .executor-container { border-color: #8b5cf6; background-color: rgba(26, 10, 26, 0.8); }
+        body.theme-red .executor-container { border-color: #ef4444; background-color: rgba(26, 5, 5, 0.8); }
+        body.theme-orange .executor-container { border-color: #f97316; background-color: rgba(26, 15, 5, 0.8); }
+        body.theme-cyan .executor-container { border-color: #06b6d4; background-color: rgba(5, 26, 26, 0.8); }
+        body.theme-pink .executor-container { border-color: #ec4899; background-color: rgba(26, 5, 26, 0.8); }
+        body.theme-gold .executor-container { border-color: #f59e0b; background-color: rgba(26, 21, 5, 0.8); }
+        body.theme-emerald .executor-container { border-color: #10b981; background-color: rgba(5, 26, 15, 0.8); }
+        body.theme-indigo .executor-container { border-color: #6366f1; background-color: rgba(15, 10, 26, 0.8); }
+        body.theme-rose .executor-container { border-color: #f43f5e; background-color: rgba(26, 5, 16, 0.8); }
+        body.theme-teal .executor-container { border-color: #14b8a6; background-color: rgba(5, 26, 26, 0.8); }
+        body.theme-lime .executor-container { border-color: #84cc16; background-color: rgba(15, 26, 5, 0.8); }
+        body.theme-amber .executor-container { border-color: #f59e0b; background-color: rgba(26, 21, 5, 0.8); }
+        body.theme-violet .executor-container { border-color: #8b5cf6; background-color: rgba(26, 5, 26, 0.8); }
+
+        .executor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid white;
+            background: rgba(255,255,255,0.05);
+        }
+
+        body.theme-blue .executor-header { border-bottom-color: #2563eb; }
+        body.theme-neon .executor-header { border-bottom-color: #00ff00; }
+        body.theme-purple .executor-header { border-bottom-color: #8b5cf6; }
+        body.theme-red .executor-header { border-bottom-color: #ef4444; }
+        body.theme-orange .executor-header { border-bottom-color: #f97316; }
+        body.theme-cyan .executor-header { border-bottom-color: #06b6d4; }
+        body.theme-pink .executor-header { border-bottom-color: #ec4899; }
+        body.theme-gold .executor-header { border-bottom-color: #f59e0b; }
+        body.theme-emerald .executor-header { border-bottom-color: #10b981; }
+        body.theme-indigo .executor-header { border-bottom-color: #6366f1; }
+        body.theme-rose .executor-header { border-bottom-color: #f43f5e; }
+        body.theme-teal .executor-header { border-bottom-color: #14b8a6; }
+        body.theme-lime .executor-header { border-bottom-color: #84cc16; }
+        body.theme-amber .executor-header { border-bottom-color: #f59e0b; }
+        body.theme-violet .executor-header { border-bottom-color: #8b5cf6; }
+
+        .executor-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: bold;
+            color: inherit;
+        }
+
+        .executor-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .control-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff5f56;
+        }
+
+        .control-dot:nth-child(2) {
+            background: #ffbd2e;
+        }
+
+        .control-dot:nth-child(3) {
+            background: #27ca3f;
+        }
+
+        .executor-main {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            min-height: 500px;
+        }
+
+        .code-editor {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: 1.5rem;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .executor-sidebar {
+            border-left: 1px solid white;
+            padding: 1.5rem;
+            background: rgba(255,255,255,0.02);
+        }
+
+        body.theme-blue .executor-sidebar { border-left-color: #2563eb; }
+        body.theme-neon .executor-sidebar { border-left-color: #00ff00; }
+        body.theme-purple .executor-sidebar { border-left-color: #8b5cf6; }
+        body.theme-red .executor-sidebar { border-left-color: #ef4444; }
+        body.theme-orange .executor-sidebar { border-left-color: #f97316; }
+        body.theme-cyan .executor-sidebar { border-left-color: #06b6d4; }
+        body.theme-pink .executor-sidebar { border-left-color: #ec4899; }
+        body.theme-gold .executor-sidebar { border-left-color: #f59e0b; }
+        body.theme-emerald .executor-sidebar { border-left-color: #10b981; }
+        body.theme-indigo .executor-sidebar { border-left-color: #6366f1; }
+        body.theme-rose .executor-sidebar { border-left-color: #f43f5e; }
+        body.theme-teal .executor-sidebar { border-left-color: #14b8a6; }
+        body.theme-lime .executor-sidebar { border-left-color: #84cc16; }
+        body.theme-amber .executor-sidebar { border-left-color: #f59e0b; }
+        body.theme-violet .executor-sidebar { border-left-color: #8b5cf6; }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-section h4 {
+            color: inherit;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        body.theme-blue .sidebar-section h4 { color: #3b82f6; }
+        body.theme-neon .sidebar-section h4 { color: #00ff00; }
+        body.theme-purple .sidebar-section h4 { color: #a855f7; }
+        body.theme-red .sidebar-section h4 { color: #ef4444; }
+        body.theme-orange .sidebar-section h4 { color: #f97316; }
+        body.theme-cyan .sidebar-section h4 { color: #06b6d4; }
+        body.theme-pink .sidebar-section h4 { color: #ec4899; }
+        body.theme-gold .sidebar-section h4 { color: #f59e0b; }
+        body.theme-emerald .sidebar-section h4 { color: #10b981; }
+        body.theme-indigo .sidebar-section h4 { color: #6366f1; }
+        body.theme-rose .sidebar-section h4 { color: #f43f5e; }
+        body.theme-teal .sidebar-section h4 { color: #14b8a6; }
+        body.theme-lime .sidebar-section h4 { color: #84cc16; }
+        body.theme-amber .sidebar-section h4 { color: #f59e0b; }
+        body.theme-violet .sidebar-section h4 { color: #8b5cf6; }
+
+        .script-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .script-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid white;
+            background: transparent;
+            color: inherit;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+        }
+
+        body.theme-blue .script-btn { border-color: #2563eb; }
+        body.theme-neon .script-btn { border-color: #00ff00; }
+        body.theme-purple .script-btn { border-color: #8b5cf6; }
+        body.theme-red .script-btn { border-color: #ef4444; }
+        body.theme-orange .script-btn { border-color: #f97316; }
+        body.theme-cyan .script-btn { border-color: #06b6d4; }
+        body.theme-pink .script-btn { border-color: #ec4899; }
+        body.theme-gold .script-btn { border-color: #f59e0b; }
+        body.theme-emerald .script-btn { border-color: #10b981; }
+        body.theme-indigo .script-btn { border-color: #6366f1; }
+        body.theme-rose .script-btn { border-color: #f43f5e; }
+        body.theme-teal .script-btn { border-color: #14b8a6; }
+        body.theme-lime .script-btn { border-color: #84cc16; }
+        body.theme-amber .script-btn { border-color: #f59e0b; }
+        body.theme-violet .script-btn { border-color: #8b5cf6; }
+
+        .script-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .executor-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid white;
+            background: rgba(255,255,255,0.02);
+        }
+
+        body.theme-blue .executor-footer { border-top-color: #2563eb; }
+        body.theme-neon .executor-footer { border-top-color: #00ff00; }
+        body.theme-purple .executor-footer { border-top-color: #8b5cf6; }
+        body.theme-red .executor-footer { border-top-color: #ef4444; }
+        body.theme-orange .executor-footer { border-top-color: #f97316; }
+        body.theme-cyan .executor-footer { border-top-color: #06b6d4; }
+        body.theme-pink .executor-footer { border-top-color: #ec4899; }
+        body.theme-gold .executor-footer { border-top-color: #f59e0b; }
+        body.theme-emerald .executor-footer { border-top-color: #10b981; }
+        body.theme-indigo .executor-footer { border-top-color: #6366f1; }
+        body.theme-rose .executor-footer { border-top-color: #f43f5e; }
+        body.theme-teal .executor-footer { border-top-color: #14b8a6; }
+        body.theme-lime .executor-footer { border-top-color: #84cc16; }
+        body.theme-amber .executor-footer { border-top-color: #f59e0b; }
+        body.theme-violet .executor-footer { border-top-color: #8b5cf6; }
+
+        .executor-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid white;
+            background: transparent;
+            color: inherit;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+        }
+
+        body.theme-blue .action-btn { border-color: #2563eb; }
+        body.theme-neon .action-btn { border-color: #00ff00; }
+        body.theme-purple .action-btn { border-color: #8b5cf6; }
+        body.theme-red .action-btn { border-color: #ef4444; }
+        body.theme-orange .action-btn { border-color: #f97316; }
+        body.theme-cyan .action-btn { border-color: #06b6d4; }
+        body.theme-pink .action-btn { border-color: #ec4899; }
+        body.theme-gold .action-btn { border-color: #f59e0b; }
+        body.theme-emerald .action-btn { border-color: #10b981; }
+        body.theme-indigo .action-btn { border-color: #6366f1; }
+        body.theme-rose .action-btn { border-color: #f43f5e; }
+        body.theme-teal .action-btn { border-color: #14b8a6; }
+        body.theme-lime .action-btn { border-color: #84cc16; }
+        body.theme-amber .action-btn { border-color: #f59e0b; }
+        body.theme-violet .action-btn { border-color: #8b5cf6; }
+
+        .action-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .action-btn.execute {
+            background: white;
+            color: black;
+        }
+
+        body.theme-blue .action-btn.execute { background: #3b82f6; color: white; }
+        body.theme-neon .action-btn.execute { background: #00ff00; color: black; }
+        body.theme-purple .action-btn.execute { background: #a855f7; color: white; }
+        body.theme-red .action-btn.execute { background: #ef4444; color: white; }
+        body.theme-orange .action-btn.execute { background: #f97316; color: white; }
+        body.theme-cyan .action-btn.execute { background: #06b6d4; color: white; }
+        body.theme-pink .action-btn.execute { background: #ec4899; color: white; }
+        body.theme-gold .action-btn.execute { background: #f59e0b; color: white; }
+        body.theme-emerald .action-btn.execute { background: #10b981; color: white; }
+        body.theme-indigo .action-btn.execute { background: #6366f1; color: white; }
+        body.theme-rose .action-btn.execute { background: #f43f5e; color: white; }
+        body.theme-teal .action-btn.execute { background: #14b8a6; color: white; }
+        body.theme-lime .action-btn.execute { background: #84cc16; color: white; }
+        body.theme-amber .action-btn.execute { background: #f59e0b; color: white; }
+        body.theme-violet .action-btn.execute { background: #8b5cf6; color: white; }
+
+        .status-info {
+            font-size: 0.875rem;
+            color: inherit;
+        }
+
+        /* Features */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+
+        .feature-card {
+            background-color: rgba(255,255,255,0.02);
+            border: 2px solid white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        body.theme-blue .feature-card { border-color: #2563eb; background-color: rgba(59, 130, 246, 0.05); }
+        body.theme-neon .feature-card { border-color: #00ff00; background-color: rgba(0, 255, 0, 0.05); }
+        body.theme-purple .feature-card { border-color: #8b5cf6; background-color: rgba(168, 85, 247, 0.05); }
+        body.theme-red .feature-card { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.05); }
+        body.theme-orange .feature-card { border-color: #f97316; background-color: rgba(249, 115, 22, 0.05); }
+        body.theme-cyan .feature-card { border-color: #06b6d4; background-color: rgba(6, 182, 212, 0.05); }
+        body.theme-pink .feature-card { border-color: #ec4899; background-color: rgba(236, 72, 153, 0.05); }
+        body.theme-gold .feature-card { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05); }
+        body.theme-emerald .feature-card { border-color: #10b981; background-color: rgba(16, 185, 129, 0.05); }
+        body.theme-indigo .feature-card { border-color: #6366f1; background-color: rgba(99, 102, 241, 0.05); }
+        body.theme-rose .feature-card { border-color: #f43f5e; background-color: rgba(244, 63, 94, 0.05); }
+        body.theme-teal .feature-card { border-color: #14b8a6; background-color: rgba(20, 184, 166, 0.05); }
+        body.theme-lime .feature-card { border-color: #84cc16; background-color: rgba(132, 204, 22, 0.05); }
+        body.theme-amber .feature-card { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05); }
+        body.theme-violet .feature-card { border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05); }
+
+        .feature-card:hover {
+            background-color: rgba(255,255,255,0.1);
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background-color: transparent;
+            border: 2px solid white;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        body.theme-blue .feature-icon { border-color: #2563eb; }
+        body.theme-neon .feature-icon { border-color: #00ff00; }
+        body.theme-purple .feature-icon { border-color: #8b5cf6; }
+        body.theme-red .feature-icon { border-color: #ef4444; }
+        body.theme-orange .feature-icon { border-color: #f97316; }
+        body.theme-cyan .feature-icon { border-color: #06b6d4; }
+        body.theme-pink .feature-icon { border-color: #ec4899; }
+        body.theme-gold .feature-icon { border-color: #f59e0b; }
+        body.theme-emerald .feature-icon { border-color: #10b981; }
+        body.theme-indigo .feature-icon { border-color: #6366f1; }
+        body.theme-rose .feature-icon { border-color: #f43f5e; }
+        body.theme-teal .feature-icon { border-color: #14b8a6; }
+        body.theme-lime .feature-icon { border-color: #84cc16; }
+        body.theme-amber .feature-icon { border-color: #f59e0b; }
+        body.theme-violet .feature-icon { border-color: #8b5cf6; }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: inherit;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            text-align: center;
+        }
+
+        .stat-card {
+            border: 1px solid white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            background: rgba(255,255,255,0.02);
+            backdrop-filter: blur(5px);
+        }
+
+        body.theme-blue .stat-card { border-color: #2563eb; background: rgba(59, 130, 246, 0.05); }
+        body.theme-neon .stat-card { border-color: #00ff00; background: rgba(0, 255, 0, 0.05); }
+        body.theme-purple .stat-card { border-color: #8b5cf6; background: rgba(168, 85, 247, 0.05); }
+        body.theme-red .stat-card { border-color: #ef4444; background: rgba(239, 68, 68, 0.05); }
+        body.theme-orange .stat-card { border-color: #f97316; background: rgba(249, 115, 22, 0.05); }
+        body.theme-cyan .stat-card { border-color: #06b6d4; background: rgba(6, 182, 212, 0.05); }
+        body.theme-pink .stat-card { border-color: #ec4899; background: rgba(236, 72, 153, 0.05); }
+        body.theme-gold .stat-card { border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); }
+        body.theme-emerald .stat-card { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+        body.theme-indigo .stat-card { border-color: #6366f1; background: rgba(99, 102, 241, 0.05); }
+        body.theme-rose .stat-card { border-color: #f43f5e; background: rgba(244, 63, 94, 0.05); }
+        body.theme-teal .stat-card { border-color: #14b8a6; background: rgba(20, 184, 166, 0.05); }
+        body.theme-lime .stat-card { border-color: #84cc16; background: rgba(132, 204, 22, 0.05); }
+        body.theme-amber .stat-card { border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); }
+        body.theme-violet .stat-card { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.05); }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: inherit;
+        }
+
+        body.theme-blue .stat-number { color: #3b82f6; }
+        body.theme-neon .stat-number { color: #00ff00; }
+        body.theme-purple .stat-number { color: #a855f7; }
+        body.theme-red .stat-number { color: #ef4444; }
+        body.theme-orange .stat-number { color: #f97316; }
+        body.theme-cyan .stat-number { color: #06b6d4; }
+        body.theme-pink .stat-number { color: #ec4899; }
+        body.theme-gold .stat-number { color: #f59e0b; }
+        body.theme-emerald .stat-number { color: #10b981; }
+        body.theme-indigo .stat-number { color: #6366f1; }
+        body.theme-rose .stat-number { color: #f43f5e; }
+        body.theme-teal .stat-number { color: #14b8a6; }
+        body.theme-lime .stat-number { color: #84cc16; }
+        body.theme-amber .stat-number { color: #f59e0b; }
+        body.theme-violet .stat-number { color: #8b5cf6; }
+
+        /* Community Card */
+        .community-card {
+            max-width: 28rem;
+            margin: 0 auto;
+            background-color: rgba(255,255,255,0.02);
+            border: 2px solid white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            backdrop-filter: blur(5px);
+        }
+
+        body.theme-blue .community-card { border-color: #2563eb; background-color: rgba(59, 130, 246, 0.05); }
+        body.theme-neon .community-card { border-color: #00ff00; background-color: rgba(0, 255, 0, 0.05); }
+        body.theme-purple .community-card { border-color: #8b5cf6; background-color: rgba(168, 85, 247, 0.05); }
+        body.theme-red .community-card { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.05); }
+        body.theme-orange .community-card { border-color: #f97316; background-color: rgba(249, 115, 22, 0.05); }
+        body.theme-cyan .community-card { border-color: #06b6d4; background-color: rgba(6, 182, 212, 0.05); }
+        body.theme-pink .community-card { border-color: #ec4899; background-color: rgba(236, 72, 153, 0.05); }
+        body.theme-gold .community-card { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05); }
+        body.theme-emerald .community-card { border-color: #10b981; background-color: rgba(16, 185, 129, 0.05); }
+        body.theme-indigo .community-card { border-color: #6366f1; background-color: rgba(99, 102, 241, 0.05); }
+        body.theme-rose .community-card { border-color: #f43f5e; background-color: rgba(244, 63, 94, 0.05); }
+        body.theme-teal .community-card { border-color: #14b8a6; background-color: rgba(20, 184, 166, 0.05); }
+        body.theme-lime .community-card { border-color: #84cc16; background-color: rgba(132, 204, 22, 0.05); }
+        body.theme-amber .community-card { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05); }
+        body.theme-violet .community-card { border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05); }
+
+        .community-card h3 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: inherit;
+        }
+
+        .community-card p {
+            margin-bottom: 1rem;
+            color: inherit;
+        }
+
+        .community-card .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid white;
+            padding: 3rem 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        body.theme-blue footer { border-top-color: #2563eb; }
+        body.theme-neon footer { border-top-color: #00ff00; }
+        body.theme-purple footer { border-top-color: #8b5cf6; }
+        body.theme-red footer { border-top-color: #ef4444; }
+        body.theme-orange footer { border-top-color: #f97316; }
+        body.theme-cyan footer { border-top-color: #06b6d4; }
+        body.theme-pink footer { border-top-color: #ec4899; }
+        body.theme-gold footer { border-top-color: #f59e0b; }
+        body.theme-emerald footer { border-top-color: #10b981; }
+        body.theme-indigo footer { border-top-color: #6366f1; }
+        body.theme-rose footer { border-top-color: #f43f5e; }
+        body.theme-teal footer { border-top-color: #14b8a6; }
+        body.theme-lime footer { border-top-color: #84cc16; }
+        body.theme-amber footer { border-top-color: #f59e0b; }
+        body.theme-violet footer { border-top-color: #8b5cf6; }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(2rem);
+            transition: all 1s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal {
+            display: none;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid white;
+            border-radius: 1rem;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease-out;
+            backdrop-filter: blur(20px);
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        body.theme-blue .modal { border-color: #2563eb; background: rgba(10, 14, 26, 0.95); }
+        body.theme-neon .modal { border-color: #00ff00; background: rgba(0, 0, 0, 0.95); }
+        body.theme-purple .modal { border-color: #8b5cf6; background: rgba(26, 10, 26, 0.95); }
+        body.theme-red .modal { border-color: #ef4444; background: rgba(26, 5, 5, 0.95); }
+        body.theme-orange .modal { border-color: #f97316; background: rgba(26, 15, 5, 0.95); }
+        body.theme-cyan .modal { border-color: #06b6d4; background: rgba(5, 26, 26, 0.95); }
+        body.theme-pink .modal { border-color: #ec4899; background: rgba(26, 5, 26, 0.95); }
+        body.theme-gold .modal { border-color: #f59e0b; background: rgba(26, 21, 5, 0.95); }
+        body.theme-emerald .modal { border-color: #10b981; background: rgba(5, 26, 15, 0.95); }
+        body.theme-indigo .modal { border-color: #6366f1; background: rgba(15, 10, 26, 0.95); }
+        body.theme-rose .modal { border-color: #f43f5e; background: rgba(26, 5, 16, 0.95); }
+        body.theme-teal .modal { border-color: #14b8a6; background: rgba(5, 26, 26, 0.95); }
+        body.theme-lime .modal { border-color: #84cc16; background: rgba(15, 26, 5, 0.95); }
+        body.theme-amber .modal { border-color: #f59e0b; background: rgba(26, 21, 5, 0.95); }
+        body.theme-violet .modal { border-color: #8b5cf6; background: rgba(26, 5, 26, 0.95); }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        body.theme-blue .modal-header { border-bottom-color: #2563eb; }
+        body.theme-neon .modal-header { border-bottom-color: #00ff00; }
+        body.theme-purple .modal-header { border-bottom-color: #8b5cf6; }
+        body.theme-red .modal-header { border-bottom-color: #ef4444; }
+        body.theme-orange .modal-header { border-bottom-color: #f97316; }
+        body.theme-cyan .modal-header { border-bottom-color: #06b6d4; }
+        body.theme-pink .modal-header { border-bottom-color: #ec4899; }
+        body.theme-gold .modal-header { border-bottom-color: #f59e0b; }
+        body.theme-emerald .modal-header { border-bottom-color: #10b981; }
+        body.theme-indigo .modal-header { border-bottom-color: #6366f1; }
+        body.theme-rose .modal-header { border-bottom-color: #f43f5e; }
+        body.theme-teal .modal-header { border-bottom-color: #14b8a6; }
+        body.theme-lime .modal-header { border-bottom-color: #84cc16; }
+        body.theme-amber .modal-header { border-bottom-color: #f59e0b; }
+        body.theme-violet .modal-header { border-bottom-color: #8b5cf6; }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: inherit;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: inherit;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(90deg);
+        }
+
+        .modal-content {
+            padding: 2rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid white;
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        body.theme-blue .modal-footer { border-top-color: #2563eb; }
+        body.theme-neon .modal-footer { border-top-color: #00ff00; }
+        body.theme-purple .modal-footer { border-top-color: #8b5cf6; }
+        body.theme-red .modal-footer { border-top-color: #ef4444; }
+        body.theme-orange .modal-footer { border-top-color: #f97316; }
+        body.theme-cyan .modal-footer { border-top-color: #06b6d4; }
+        body.theme-pink .modal-footer { border-top-color: #ec4899; }
+        body.theme-gold .modal-footer { border-top-color: #f59e0b; }
+        body.theme-emerald .modal-footer { border-top-color: #10b981; }
+        body.theme-indigo .modal-footer { border-top-color: #6366f1; }
+        body.theme-rose .modal-footer { border-top-color: #f43f5e; }
+        body.theme-teal .modal-footer { border-top-color: #14b8a6; }
+        body.theme-lime .modal-footer { border-top-color: #84cc16; }
+        body.theme-amber .modal-footer { border-top-color: #f59e0b; }
+        body.theme-violet .modal-footer { border-top-color: #8b5cf6; }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 2rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background-color: transparent;
+            color: inherit;
+            text-decoration: none;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Feature Showcase */
+        .feature-showcase {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .showcase-item {
+            text-align: center;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .showcase-icon {
+            width: 2rem;
+            height: 2rem;
+            margin: 0 auto 0.5rem;
+        }
+
+        .showcase-item h4 {
+            margin: 0.5rem 0;
+            color: inherit;
+        }
+
+        .showcase-item p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        /* Login Form */
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: inherit;
+        }
+
+        .form-group input {
+            padding: 0.75rem;
+            border: 1px solid white;
+            border-radius: 0.25rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: inherit;
+            font-size: 1rem;
+        }
+
+        body.theme-blue .form-group input { border-color: #2563eb; }
+        body.theme-neon .form-group input { border-color: #00ff00; }
+        body.theme-purple .form-group input { border-color: #8b5cf6; }
+        body.theme-red .form-group input { border-color: #ef4444; }
+        body.theme-orange .form-group input { border-color: #f97316; }
+        body.theme-cyan .form-group input { border-color: #06b6d4; }
+        body.theme-pink .form-group input { border-color: #ec4899; }
+        body.theme-gold .form-group input { border-color: #f59e0b; }
+        body.theme-emerald .form-group input { border-color: #10b981; }
+        body.theme-indigo .form-group input { border-color: #6366f1; }
+        body.theme-rose .form-group input { border-color: #f43f5e; }
+        body.theme-teal .form-group input { border-color: #14b8a6; }
+        body.theme-lime .form-group input { border-color: #84cc16; }
+        body.theme-amber .form-group input { border-color: #f59e0b; }
+        body.theme-violet .form-group input { border-color: #8b5cf6; }
+
+        .form-group input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            color: inherit;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .forgot-link:hover {
+            opacity: 1;
+        }
+
+        /* Pricing Details */
+        .pricing-details {
+            text-align: center;
+        }
+
+        .price-tag {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: inherit;
+        }
+
+        body.theme-blue .price-tag { color: #3b82f6; }
+        body.theme-neon .price-tag { color: #00ff00; }
+        body.theme-purple .price-tag { color: #a855f7; }
+        body.theme-red .price-tag { color: #ef4444; }
+        body.theme-orange .price-tag { color: #f97316; }
+        body.theme-cyan .price-tag { color: #06b6d4; }
+        body.theme-pink .price-tag { color: #ec4899; }
+        body.theme-gold .price-tag { color: #f59e0b; }
+        body.theme-emerald .price-tag { color: #10b981; }
+        body.theme-indigo .price-tag { color: #6366f1; }
+        body.theme-rose .price-tag { color: #f43f5e; }
+        body.theme-teal .price-tag { color: #14b8a6; }
+        body.theme-lime .price-tag { color: #84cc16; }
+        body.theme-amber .price-tag { color: #f59e0b; }
+        body.theme-violet .price-tag { color: #8b5cf6; }
+
+        .price-tag span {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+
+        .feature-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* Discord Info */
+        .discord-info {
+            text-align: center;
+        }
+
+        .discord-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .stat-item .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: inherit;
+        }
+
+        body.theme-blue .stat-item .stat-number { color: #3b82f6; }
+        body.theme-neon .stat-item .stat-number { color: #00ff00; }
+        body.theme-purple .stat-item .stat-number { color: #a855f7; }
+        body.theme-red .stat-item .stat-number { color: #ef4444; }
+        body.theme-orange .stat-item .stat-number { color: #f97316; }
+        body.theme-cyan .stat-item .stat-number { color: #06b6d4; }
+        body.theme-pink .stat-item .stat-number { color: #ec4899; }
+        body.theme-gold .stat-item .stat-number { color: #f59e0b; }
+        body.theme-emerald .stat-item .stat-number { color: #10b981; }
+        body.theme-indigo .stat-item .stat-number { color: #6366f1; }
+        body.theme-rose .stat-item .stat-number { color: #f43f5e; }
+        body.theme-teal .stat-item .stat-number { color: #14b8a6; }
+        body.theme-lime .stat-item .stat-number { color: #84cc16; }
+        body.theme-amber .stat-item .stat-number { color: #f59e0b; }
+        body.theme-violet .stat-item .stat-number { color: #8b5cf6; }
+
+        .stat-item .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .discord-features {
+            text-align: left;
+        }
+
+        .discord-features p {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Executor Preview */
+        .executor-preview {
+            text-align: center;
+        }
+
+        .demo-note {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Purchase Modal Styles */
+        .purchase-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .purchase-summary {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .purchase-summary h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.5rem;
+            color: inherit;
+        }
+
+        .price-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: inherit;
+        }
+
+        body.theme-blue .price-display { color: #3b82f6; }
+        body.theme-neon .price-display { color: #00ff00; }
+        body.theme-purple .price-display { color: #a855f7; }
+        body.theme-red .price-display { color: #ef4444; }
+        body.theme-orange .price-display { color: #f97316; }
+        body.theme-cyan .price-display { color: #06b6d4; }
+        body.theme-pink .price-display { color: #ec4899; }
+        body.theme-gold .price-display { color: #f59e0b; }
+        body.theme-emerald .price-display { color: #10b981; }
+        body.theme-indigo .price-display { color: #6366f1; }
+        body.theme-rose .price-display { color: #f43f5e; }
+        body.theme-teal .price-display { color: #14b8a6; }
+        body.theme-lime .price-display { color: #84cc16; }
+        body.theme-amber .price-display { color: #f59e0b; }
+        body.theme-violet .price-display { color: #8b5cf6; }
+
+        .order-id-container {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .order-id-container input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 2px solid rgba(255, 255, 255, 0.2) !important;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .copy-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: inherit;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .form-note {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            opacity: 0.7;
+            color: inherit;
+        }
+
+        /* Payment Dropdown */
+        .payment-dropdown {
+            position: relative;
+        }
+
+        .payment-dropdown-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid white;
+            border-radius: 0.25rem;
+            color: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        body.theme-blue .payment-dropdown-trigger { border-color: #2563eb; }
+        body.theme-neon .payment-dropdown-trigger { border-color: #00ff00; }
+        body.theme-purple .payment-dropdown-trigger { border-color: #8b5cf6; }
+        body.theme-red .payment-dropdown-trigger { border-color: #ef4444; }
+        body.theme-orange .payment-dropdown-trigger { border-color: #f97316; }
+        body.theme-cyan .payment-dropdown-trigger { border-color: #06b6d4; }
+        body.theme-pink .payment-dropdown-trigger { border-color: #ec4899; }
+        body.theme-gold .payment-dropdown-trigger { border-color: #f59e0b; }
+        body.theme-emerald .payment-dropdown-trigger { border-color: #10b981; }
+        body.theme-indigo .payment-dropdown-trigger { border-color: #6366f1; }
+        body.theme-rose .payment-dropdown-trigger { border-color: #f43f5e; }
+        body.theme-teal .payment-dropdown-trigger { border-color: #14b8a6; }
+        body.theme-lime .payment-dropdown-trigger { border-color: #84cc16; }
+        body.theme-amber .payment-dropdown-trigger { border-color: #f59e0b; }
+        body.theme-violet .payment-dropdown-trigger { border-color: #8b5cf6; }
+
+        .payment-dropdown-trigger:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .payment-dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.5rem;
+            margin-top: 0.25rem;
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+        }
+
+        .payment-dropdown-content.show {
+            display: block;
+            animation: dropdownSlide 0.2s ease-out;
+        }
+
+        .payment-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .payment-option:last-child {
+            border-bottom: none;
+        }
+
+        .payment-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .payment-icon {
+            font-size: 1.25rem;
+        }
+
+        /* Confirmation Modal */
+        .confirmation-details {
+            text-align: center;
+        }
+
+        .confirmation-icon {
+            width: 4rem;
+            height: 4rem;
+            margin: 0 auto 1.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #10b981;
+        }
+
+        .confirmation-icon svg {
+            width: 2rem;
+            height: 2rem;
+            color: #10b981;
+        }
+
+        .confirmation-summary {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-row.highlight {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 0 -1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+        }
+
+        .confirmation-warning {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 0.5rem;
+            color: #f59e0b;
+            font-size: 0.875rem;
+        }
+
+        .confirm-btn {
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+            border-color: #10b981 !important;
+            color: white !important;
+        }
+
+        .confirm-btn:hover {
+            background: linear-gradient(135deg, #059669, #047857) !important;
+            transform: translateY(-1px);
+        }
+
+        /* Success Modal */
+        .success-content {
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 5rem;
+            height: 5rem;
+            margin: 0 auto 1.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #10b981;
+            animation: successPulse 2s ease-in-out infinite;
+        }
+
+        .success-icon svg {
+            width: 2.5rem;
+            height: 2.5rem;
+            color: #10b981;
+        }
+
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .success-steps {
+            text-align: left;
+            margin: 2rem 0;
+        }
+
+        .step {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .step-number {
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h5 {
+            margin: 0 0 0.5rem 0;
+            color: inherit;
+        }
+
+        .step-content p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        .order-reminder {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.75rem;
+            margin-top: 1.5rem;
+            color: #3b82f6;
+        }
+
+        .copy-btn-small {
+            padding: 0.25rem 0.75rem;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #3b82f6;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn-small:hover {
+            background: rgba(59, 130, 246, 0.3);
+        }
+
+        .discord-btn {
+            background: linear-gradient(135deg, #5865f2, #4752c4) !important;
+            border-color: #5865f2 !important;
+            color: white !important;
+        }
+
+        .discord-btn:hover {
+            background: linear-gradient(135deg, #4752c4, #3c45a5) !important;
+            transform: translateY(-1px);
+        }
+
+        /* Remove all animation delays */
+        * {
+            animation-delay: 0s !important;
+        }
+
+        /* Modal Animations */
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Responsive */
+        @media (min-width: 640px) {
+            .hero-buttons {
+                flex-direction: row;
+                justify-content: center;
+            }
+
+            .footer-content {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .hero h1 {
+                font-size: 6rem;
+            }
+
+            nav {
+                display: flex;
+            }
+        }
+
+        @media (max-width: 767px) {
+            nav {
+                display: none;
+            }
+
+            .executor-main {
+                grid-template-columns: 1fr;
+            }
+
+            .executor-sidebar {
+                border-left: none;
+                border-top: 1px solid white;
+            }
+
+            body.theme-blue .executor-sidebar { border-top-color: #2563eb; }
+            body.theme-neon .executor-sidebar { border-top-color: #00ff00; }
+            body.theme-purple .executor-sidebar { border-top-color: #8b5cf6; }
+            body.theme-red .executor-sidebar { border-top-color: #ef4444; }
+            body.theme-orange .executor-sidebar { border-top-color: #f97316; }
+            body.theme-cyan .executor-sidebar { border-top-color: #06b6d4; }
+            body.theme-pink .executor-sidebar { border-top-color: #ec4899; }
+            body.theme-gold .executor-sidebar { border-top-color: #f59e0b; }
+            body.theme-emerald .executor-sidebar { border-top-color: #10b981; }
+            body.theme-indigo .executor-sidebar { border-top-color: #6366f1; }
+            body.theme-rose .executor-sidebar { border-top-color: #f43f5e; }
+            body.theme-teal .executor-sidebar { border-top-color: #14b8a6; }
+            body.theme-lime .executor-sidebar { border-top-color: #84cc16; }
+            body.theme-amber .executor-sidebar { border-top-color: #f59e0b; }
+            body.theme-violet .executor-sidebar { border-top-color: #8b5cf6; }
+
+            .custom-dropdown-content {
+                left: 0;
+                right: 0;
+                margin-left: 1rem;
+                margin-right: 1rem;
+            }
+
+            .modal {
+                max-width: 95%;
+                max-height: 95vh;
+            }
+            
+            .order-id-container {
+                flex-direction: column;
+            }
+            
+            .order-id-container input {
+                margin-bottom: 0.5rem;
+            }
+            
+            .summary-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+            
+            .step {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .order-reminder {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+
+<style>
+
+h1, h2, h3, p, span, label, button {
+  font-family: 'Segoe UI', sans-serif;
+}
+.thank-you-banner {
+  display: none;
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  font-weight: bold;
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  color: white;
+}
+</style>
+
+</head>
+<body class="theme-default">
+<div id="thankYouBanner" class="thank-you-banner"></div>
+    <!-- 3D Background -->
+    <div class="background-3d" id="background3d"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">
+                       
+                    </div>
+                    <span>Galaxia Gateway</span>
+                </div>
+                <nav>
+                    <!-- Features Dropdown -->
+                    <div class="nav-dropdown">
+                        <div class="custom-dropdown-trigger" onclick="toggleDropdown('featuresDropdown', 'featuresChevron')">
+                            <span>Features</span>
+                            <svg class="chevron-icon" id="featuresChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="6,9 12,15 18,9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="custom-dropdown-content" id="featuresDropdown">
+                            <button class="custom-dropdown-item" onclick="showModal('featuresModal')">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+                                </svg>
+                                <span>View Features</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="showModal('executorModal')">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="16,18 22,12 16,6"/>
+                                    <polyline points="8,6 2,12 8,18"/>
+                                </svg>
+                                <span>Try Executor</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Login Dropdown -->
+                    <div class="nav-dropdown">
+                        <div class="custom-dropdown-trigger" onclick="toggleDropdown('loginDropdown', 'loginChevron')">
+                            <span>Login</span>
+                            <svg class="chevron-icon" id="loginChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="6,9 12,15 18,9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="custom-dropdown-content" id="loginDropdown">
+                            <button class="custom-dropdown-item" onclick="showModal('loginModal')">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                                    <polyline points="10,17 15,12 10,7"/>
+                                    <line x1="15" y1="12" x2="3" y2="12"/>
+                                </svg>
+                                <span>Sign In</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="showModal('registerModal')">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="8.5" cy="7" r="4"/>
+                                    <line x1="20" y1="8" x2="20" y2="14"/>
+                                    <line x1="23" y1="11" x2="17" y2="11"/>
+                                </svg>
+                                <span>Register</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pricing Dropdown -->
+                    <div class="nav-dropdown">
+                        <div class="custom-dropdown-trigger" onclick="toggleDropdown('pricingDropdown', 'pricingChevron')">
+                            <span>Pricing</span>
+                            <svg class="chevron-icon" id="pricingChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="6,9 12,15 18,9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="custom-dropdown-content" id="pricingDropdown">
+                            <button class="custom-dropdown-item" onclick="showPurchaseModal('Standard Plan', '$9.99')">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polygon points="12,2 15.09,8.26 22,9 17,14 18.18,21 12,17.77 5.82,21 7,14 2,9 8.91,8.26 12,2"/>
+                                </svg>
+                                <span>Standard - $9.99</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="showPurchaseModal('Premium Plan', '$19.99')">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polygon points="12,2 15.09,8.26 22,9 17,14 18.18,21 12,17.77 5.82,21 7,14 2,9 8.91,8.26 12,2"/>
+                                </svg>
+                                <span>Premium - $19.99</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Theme Dropdown -->
+                    <div class="nav-dropdown">
+                        <div class="custom-dropdown-trigger" onclick="toggleDropdown('themeDropdown', 'themeChevron')">
+                            <span>Theme</span>
+                            <svg class="chevron-icon" id="themeChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="6,9 12,15 18,9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="custom-dropdown-content" id="themeDropdown">
+                            <button class="custom-dropdown-item" onclick="changeTheme('default')">
+                                <div class="theme-color-indicator" style="background: white;"></div>
+                                <span>Default</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('blue')">
+                                <div class="theme-color-indicator" style="background: #3b82f6;"></div>
+                                <span>Blue</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('neon')">
+                                <div class="theme-color-indicator" style="background: #00ff00;"></div>
+                                <span>Neon Green</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('purple')">
+                                <div class="theme-color-indicator" style="background: #a855f7;"></div>
+                                <span>Purple</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('red')">
+                                <div class="theme-color-indicator" style="background: #ef4444;"></div>
+                                <span>Red</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('orange')">
+                                <div class="theme-color-indicator" style="background: #f97316;"></div>
+                                <span>Orange</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('cyan')">
+                                <div class="theme-color-indicator" style="background: #06b6d4;"></div>
+                                <span>Cyan</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('pink')">
+                                <div class="theme-color-indicator" style="background: #ec4899;"></div>
+                                <span>Pink</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('gold')">
+                                <div class="theme-color-indicator" style="background: #f59e0b;"></div>
+                                <span>Gold</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('emerald')">
+                                <div class="theme-color-indicator" style="background: #10b981;"></div>
+                                <span>Emerald</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('indigo')">
+                                <div class="theme-color-indicator" style="background: #6366f1;"></div>
+                                <span>Indigo</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('rose')">
+                                <div class="theme-color-indicator" style="background: #f43f5e;"></div>
+                                <span>Rose</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('teal')">
+                                <div class="theme-color-indicator" style="background: #14b8a6;"></div>
+                                <span>Teal</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('lime')">
+                                <div class="theme-color-indicator" style="background: #84cc16;"></div>
+                                <span>Lime</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('amber')">
+                                <div class="theme-color-indicator" style="background: #f59e0b;"></div>
+                                <span>Amber</span>
+                            </button>
+                            <button class="custom-dropdown-item" onclick="changeTheme('violet')">
+                                <div class="theme-color-indicator" style="background: #8b5cf6;"></div>
+                                <span>Violet</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Discord Button -->
+                    <a href="https://discord.gg/celestial" class="btn" target="_blank">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                        </svg>
+                        Discord
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="badge">Server-Side Executor</div>
+            <h1>Galaxia Gateway</h1>
+            <p>The most advanced server-side Roblox executor with undetectable execution and premium features.</p>
+            <div class="hero-buttons">
+                <a href="#pricing" class="btn btn-lg">Get Started</a>
+                <button class="btn btn-lg" onclick="showModal('executorModal')">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <polygon points="5,3 19,12 5,21 5,3"/>
+                    </svg>
+                    Try Demo
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing-section section-border">
+        <div class="container">
+            <h2 style="font-size: 3rem; font-weight: bold; margin-bottom: 1rem;">Choose Your Plan</h2>
+            <p style="font-size: 1.25rem; margin-bottom: 3rem; opacity: 0.8;">Select the perfect plan for your needs</p>
+            
+            <div class="pricing-grid">
+                <!-- Standard Plan -->
+                <div class="pricing-card">
+                    <h3>Standard</h3>
+                    <div class="pricing-price">$9.99</div>
+                    <div class="pricing-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Basic script execution</li>
+                        <li>Standard security</li>
+                        <li>Community support</li>
+                        <li>Regular updates</li>
+                        <li>Basic script library</li>
+                    </ul>
+                    <button class="btn" onclick="showPurchaseModal('Standard Plan', '$9.99')">Purchase</button>
+                </div>
+
+                <!-- Premium Plan -->
+                <div class="pricing-card popular">
+                    <h3>Premium</h3>
+                    <div class="pricing-price">$19.99</div>
+                    <div class="pricing-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Advanced script execution</li>
+                        <li>Maximum security</li>
+                        <li>Priority support</li>
+                        <li>Instant updates</li>
+                        <li>Premium script library</li>
+                        <li>Custom scripts</li>
+                        <li>Advanced features</li>
+                    </ul>
+                    <button class="btn" onclick="showPurchaseModal('Premium Plan', '$19.99')">Purchase</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section-border">
+        <div class="container">
+            <h2 style="font-size: 3rem; font-weight: bold; margin-bottom: 1rem; text-align: center;">Features</h2>
+            <p style="font-size: 1.25rem; margin-bottom: 3rem; text-align: center; opacity: 0.8;">Powerful features for advanced users</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                    </div>
+                    <h3>Server-Side Execution</h3>
+                    <p>Execute scripts directly on the server for maximum compatibility and performance.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <h3>Undetectable</h3>
+                    <p>Advanced anti-detection technology keeps you safe from bans and detection systems.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+                        </svg>
+                    </div>
+                    <h3>Lightning Fast</h3>
+                    <p>Optimized execution engine delivers scripts faster than any other executor.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                    </div>
+                    <h3>Advanced Tools</h3>
+                    <p>Built-in debugging tools, script editor, and advanced execution options.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <h3>Community</h3>
+                    <p>Join thousands of users in our Discord community for support and script sharing.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                            <line x1="12" y1="22.08" x2="12" y2="12"/>
+                        </svg>
+                    </div>
+                    <h3>Script Library</h3>
+                    <p>Access to premium scripts and regular updates with new features and improvements.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="section-border">
+        <div class="container">
+            <h2 style="font-size: 3rem; font-weight: bold; margin-bottom: 3rem; text-align: center;">Trusted by Thousands</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">50K+</div>
+                    <div>Active Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">99.9%</div>
+                    <div>Uptime</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1M+</div>
+                    <div>Scripts Executed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">24/7</div>
+                    <div>Support</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Section -->
+    <section class="section-border">
+        <div class="container" style="text-align: center;">
+            <h2 style="font-size: 3rem; font-weight: bold; margin-bottom: 1rem;">Join Our Community</h2>
+            <p style="font-size: 1.25rem; margin-bottom: 3rem; opacity: 0.8;">Connect with other users and get support</p>
+            
+            <div class="community-card">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                    </svg>
+                    Discord Community
+                </h3>
+                <p>Get instant support, share scripts, and connect with other Galaxia Gateway users in our active Discord server.</p>
+                <a href="https://discord.gg/celestial" class="btn" target="_blank">Join Discord</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="logo">
+                    <div class="logo-icon">
+                       
+                    </div>
+                    <span>Galaxia Gateway</span>
+                </div>
+                <p>&copy; 2024 Galaxia Gateway. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Purchase Modal -->
+    <div class="modal-overlay" id="purchaseModalOverlay">
+        <div class="modal show" id="purchaseModal">
+            <div class="modal-header">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="9" cy="21" r="1"/>
+                        <circle cx="20" cy="21" r="1"/>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                    </svg>
+                    Purchase Plan
+                </h3>
+                <button class="modal-close" onclick="hideModal('purchaseModalOverlay')">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="purchase-summary">
+                    <h4 id="purchasePlanName">Standard Plan</h4>
+                    <div class="price-display" id="purchasePlanPrice">$9.99</div>
+                    <small>per month</small>
+                </div>
+                
+                <form class="purchase-form" onsubmit="handlePurchase(event)">
+                    <div class="form-group">
+                        <label for="purchaseEmail">Email Address</label>
+                        <input type="email" id="purchaseEmail" name="email" required placeholder="your@email.com">
+                        <small class="form-note">We'll send your purchase confirmation here</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="discordUsername">Discord Username</label>
+                        <input type="text" id="discordUsername" name="discord" required placeholder="username#1234">
+                        <small class="form-note">Required for access and support</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="orderIdField">Order ID</label>
+                        <div class="order-id-container">
+                            <input type="text" id="orderIdField" name="orderId" readonly>
+                            <button type="button" class="copy-btn" onclick="copyOrderId()">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                </svg>
+                                Copy
+                            </button>
+                        </div>
+                        <small class="form-note">Save this ID - you'll need it for Discord verification</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <div class="payment-dropdown">
+                            <div class="payment-dropdown-trigger" onclick="togglePaymentDropdown()">
+                                <span id="selectedPaymentMethod">Select payment method</span>
+                                <svg class="chevron-icon" id="paymentChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="6,9 12,15 18,9"></polyline>
+                                </svg>
+                            </div>
+                            <div class="payment-dropdown-content" id="paymentDropdownContent">
+                                <button type="button" class="payment-option" onclick="selectPaymentMethod('PayPal', '💳')">
+                                    <span class="payment-icon">💳</span>
+                                    <span>PayPal</span>
+                                </button>
+                                <button type="button" class="payment-option" onclick="selectPaymentMethod('Crypto', '₿')">
+                                    <span class="payment-icon">₿</span>
+                                    <span>Crypto</span>
+                                </button>
+                                <button type="button" class="payment-option" onclick="selectPaymentMethod('Robux', '🎮')">
+                                    <span class="payment-icon">🎮</span>
+                                    <span>Robux</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="hideModal('purchaseModalOverlay')">Cancel</button>
+                        <button type="submit" class="btn">Complete Purchase</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmationModalOverlay">
+        <div class="modal show" id="confirmationModal">
+            <div class="modal-header">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    Confirm Purchase
+                </h3>
+                <button class="modal-close" onclick="hideModal('confirmationModalOverlay')">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="confirmation-details">
+                    <div class="confirmation-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 12l2 2 4-4"/>
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                    </div>
+                    
+                    <h4>Review Your Purchase</h4>
+                    <p>Please confirm the details below before completing your purchase.</p>
+                    
+                    <div class="confirmation-summary">
+                        <div class="summary-row">
+                            <span>Plan:</span>
+                            <span id="confirmPlanName">Standard Plan</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Price:</span>
+                            <span id="confirmPlanPrice">$9.99/month</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Email:</span>
+                            <span id="confirmEmail">user@example.com</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Discord:</span>
+                            <span id="confirmDiscord">username#1234</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Payment:</span>
+                            <span id="confirmPayment">PayPal</span>
+                        </div>
+                        <div class="summary-row highlight">
+                            <span>Order ID:</span>
+                            <span id="confirmOrderId">CEL-XXXX-XXXX</span>
+                        </div>
+                    </div>
+                    
+                    <div class="confirmation-warning">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        Make sure to save your Order ID! You'll need it to create a support ticket in Discord.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('confirmationModalOverlay')">Go Back</button>
+                <button type="button" class="btn confirm-btn" onclick="processPurchase()">Confirm Purchase</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal-overlay" id="successModalOverlay">
+        <div class="modal show" id="successModal">
+            <div class="modal-header">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22,4 12,14.01 9,11.01"/>
+                    </svg>
+                    Purchase Successful!
+                </h3>
+                <button class="modal-close" onclick="hideModal('successModalOverlay')">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="success-content">
+                    <div class="success-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22,4 12,14.01 9,11.01"/>
+                        </svg>
+                    </div>
+                    
+                    <h4>Thank you for your purchase!</h4>
+                    <p>Your <span id="successPlanName">Standard Plan</span> subscription is now active.</p>
+                    
+                    <div class="success-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h5>Join Our Discord Server</h5>
+                                <p>Click the Discord button below to join our community server where you'll get access to your plan.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h5>Create a Support Ticket</h5>
+                                <p>Once in Discord, create a support ticket in the #support channel to verify your purchase.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h5>Provide Your Order ID</h5>
+                                <p>Share your Order ID with our support team to get your role and access to Galaxia Gateway.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-reminder">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 12l2 2 4-4"/>
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        <div>
+                            <strong>Your Order ID:</strong> <span id="successOrderId">CEL-XXXX-XXXX</span>
+                            <button class="copy-btn-small" onclick="copySuccessOrderId()">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn discord-btn" onclick="window.open('https://discord.gg/celestial', '_blank')">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                    </svg>
+                    Join Discord Server
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="hideModal('successModalOverlay')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Modal -->
+    <div class="modal-overlay" id="featuresModalOverlay">
+        <div class="modal show" id="featuresModal">
+            <div class="modal-header">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+                    </svg>
+                    Galaxia Gateway Features
+                </h3>
+                <button class="modal-close" onclick="hideModal('featuresModalOverlay')">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="feature-showcase">
+                    <div class="showcase-item">
+                        <svg class="showcase-icon icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                        <h4>Server-Side Execution</h4>
+                        <p>Execute scripts directly on the server for maximum compatibility</p>
+                    </div>
+                    <div class="showcase-item">
+                        <svg class="showcase-icon icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        <h4>Undetectable</h4>
+                        <p>Advanced anti-detection keeps you safe from bans</p>
+                    </div>
+                    <div class="showcase-item">
+                        <svg class="showcase-icon icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+                        </svg>
+                        <h4>Lightning Fast</h4>
+                        <p>Optimized execution engine for maximum performance</p>
+                    </div>
+                    <div class="showcase-item">
+                        <svg class="showcase-icon icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                            <line x1="12" y1="22.08" x2="12" y2="12"/>
+                        </svg>
+                        <h4>Premium Scripts</h4>
+                        <p>Access to exclusive script library and regular updates</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" onclick="hideModal('featuresModalOverlay')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executor Modal -->
+    <div class="modal-overlay" id="executorModalOverlay">
+        <div class="modal show" id="executorModal" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <polyline points="16,18 22,12 16,6"/>
+                        <polyline points="8,6 2,12 8,18"/>
+                    </svg>
+                    Galaxia Gateway Executor Demo
+                </h3>
+                <button class="modal-close" onclick="hideModal('executorModalOverlay')">&times;</button>
+            </div>
+            <div class="modal-content" style="padding: 0;">
+                <div class="executor-preview">
+                    <div class="executor-container">
+                        <div class="executor-header">
+                            <div class="executor-title">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="16,18 22,12 16,6"/>
+                                    <polyline points="8,6 2,12 8,18"/>
+                                </svg>
+                                Galaxia Gateway Executor
+                            </div>
+                            <div class="executor-controls">
+                                <div class="control-dot"></div>
+                                <div class="control-dot"></div>
+                                <div class="control-dot"></div>
+                            </div>
+                        </div>
+                        <div class="executor-main">
+                            <textarea class="code-editor" placeholder="-- Welcome to Galaxia Gateway Executor
+-- Enter your Lua script here
+
+print('Hello from Galaxia Gateway!')
+
+-- Example: Get all players
+for i, player in pairs(game.Players:GetPlayers()) do
+    print(player.Name)
+end
+
+-- This is a demo version
+-- Purchase a plan to unlock full functionality"></textarea>
+                            <div class="executor-sidebar">
+                                <div class="sidebar-section">
+                                    <h4>Quick Scripts</h4>
+                                    <div class="script-buttons">
+                                        <button class="script-btn">Infinite Jump</button>
+                                        <button class="script-btn">Speed Boost</button>
+                                        <button class="script-btn">Fly Script</button>
+                                        <button class="script-btn">Noclip</button>
+                                    </div>
+                                </div>
+                                <div class="sidebar-section">
+                                    <h4>Tools</h4>
+                                    <div class="script-buttons">
+                                        <button class="script-btn">Script Hub</button>
+                                        <button class="script-btn">Remote Spy</button>
+                                        <button class="script-btn">Dex Explorer</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="executor-footer">
+                            <div class="status-info">Status: Demo Mode</div>
+                            <div class="executor-actions">
+                                <button class="action-btn">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14,2 14,8 20,8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                        <polyline points="10,9 9,9 8,9"/>
+                                    </svg>
+                                    Save
+                                </button>
+                                <button class="action-btn">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M3 3h18v18H3zM9 9h6v6H9z"/>
+                                    </svg>
+                                    Clear
+                                </button>
+                                <button class="action-btn execute">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <polygon points="5,3 19,12 5,21 5,3"/>
+                                    </svg>
+                                    Execute
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-note">
+                        <p><strong>Demo Version:</strong> This is a preview of the Galaxia Gateway Executor interface. Purchase a plan to unlock full script execution and premium features.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('executorModalOverlay')">Close</button>
+                <button type="button" class="btn" onclick="hideModal('executorModalOverlay'); document.getElementById('pricing').scrollIntoView();">Get Full Version</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModalOverlay">
+        <div class="modal show" id="loginModal">
+            <div class="modal-header">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                        <polyline points="10,17 15,12 10,7"/>
+                        <line x1="15" y1="12" x2="3" y2="12"/>
+                    </svg>
+                    Sign In
+                </h3>
+                <button class="modal-close" onclick="hideModal('loginModalOverlay')">&times;</button>
+            </div>
+            <div class="modal-content">
+                <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" required placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required placeholder="••••••••">
+                        <div class="form-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox"> Remember me
+                            </label>
+                            <a href="#" class="forgot-link">Forgot password?</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('loginModalOverlay')">Cancel</button>
+                <button type="submit" form="loginForm" class="btn">Sign In</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div class="modal-overlay" id="registerModalOverlay">
+        <div class="modal show" id="registerModal">
+            <div class="modal-header">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="8.5" cy="7" r="4"/>
+                        <line x1="20" y1="8" x2="20" y2="14"/>
+                        <line x1="23" y1="11" x2="17" y2="11"/>
+                    </svg>
+                    Create Account
+                </h3>
+                <button class="modal-close" onclick="hideModal('registerModalOverlay')">&times;</button>
+            </div>
+            <div class="modal-content">
+                <form class="login-form">
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" required placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" required placeholder="••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" required placeholder="••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" required> I agree to the Terms of Service
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('registerModalOverlay')">Cancel</button>
+                <button type="button" class="btn">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentOrderId = '';
+        let currentPlan = '';
+        let currentPrice = '';
+        let selectedPaymentMethod = '';
+
+        // 3D Background Animation
+        function create3DBackground() {
+            const background = document.getElementById('background3d');
+            
+            // Create various 3D elements
+            const elements = [
+                { type: 'cube', count: 8 },
+                { type: 'line', count: 12 },
+                { type: 'particle', count: 20 },
+                { type: 'wave', count: 6 },
+                { type: 'matrix', count: 5 },
+                { type: 'spiral', count: 4 },
+                { type: 'diamond', count: 10 },
+                { type: 'orb', count: 8 },
+                { type: 'triangle', count: 6 },
+                { type: 'hexagon', count: 5 },
+                { type: 'star', count: 7 },
+                { type: 'ring', count: 4 }
+            ];
+
+            elements.forEach(elementType => {
+                for (let i = 0; i < elementType.count; i++) {
+                    createElement(elementType.type, background);
+                }
+            });
+        }
+
+        function createElement(type, container) {
+            let element;
+            
+            switch (type) {
+                case 'cube':
+                    element = document.createElement('div');
+                    element.className = 'cube-3d';
+                    element.innerHTML = `
+                        <div class="cube-face front"></div>
+                        <div class="cube-face back"></div>
+                        <div class="cube-face right"></div>
+                        <div class="cube-face left"></div>
+                        <div class="cube-face top"></div>
+                        <div class="cube-face bottom"></div>
+                    `;
+                    break;
+                case 'line':
+                    element = document.createElement('div');
+                    element.className = 'line-3d';
+                    element.style.width = Math.random() * 200 + 100 + 'px';
+                    break;
+                case 'particle':
+                    element = document.createElement('div');
+                    element.className = 'particle-3d';
+                    element.style.width = element.style.height = Math.random() * 6 + 2 + 'px';
+                    break;
+                case 'wave':
+                    element = document.createElement('div');
+                    element.className = 'wave-3d';
+                    element.style.width = Math.random() * 150 + 50 + 'px';
+                    element.style.height = Math.random() * 20 + 5 + 'px';
+                    break;
+                case 'matrix':
+                    element = document.createElement('div');
+                    element.className = 'matrix-column';
+                    element.textContent = generateMatrixText();
+                    break;
+                case 'spiral':
+                    element = document.createElement('div');
+                    element.className = 'spiral-3d';
+                    break;
+                case 'diamond':
+                    element = document.createElement('div');
+                    element.className = 'diamond-3d';
+                    break;
+                case 'orb':
+                    element = document.createElement('div');
+                    element.className = 'orb-3d';
+                    break;
+                case 'triangle':
+                    element = document.createElement('div');
+                    element.className = 'triangle-3d';
+                    break;
+                case 'hexagon':
+                    element = document.createElement('div');
+                    element.className = 'hexagon-3d';
+                    break;
+                case 'star':
+                    element = document.createElement('div');
+                    element.className = 'star-3d';
+                    break;
+                case 'ring':
+                    element = document.createElement('div');
+                    element.className = 'ring-3d';
+                    break;
+            }
+
+            // Random positioning and animation timing
+            element.style.left = Math.random() * 100 + 'vw';
+            element.style.top = Math.random() * 100 + 'vh';
+            element.style.animationDelay = Math.random() * 20 + 's';
+            element.style.animationDuration = (Math.random() * 10 + 10) + 's';
+
+            container.appendChild(element);
+        }
+
+        function generateMatrixText() {
+            const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+            let result = '';
+            for (let i = 0; i < 20; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length)) + '\n';
+            }
+            return result;
+        }
+
+        // Theme Management
+        function changeTheme(theme) {
+            document.body.className = `theme-${theme}`;
+            localStorage.setItem('celestial-theme', theme);
+            closeAllDropdowns();
+        }
+
+        // Dropdown Management
+        function toggleDropdown(dropdownId, chevronId) {
+            closeAllDropdowns();
+            const dropdown = document.getElementById(dropdownId);
+            const chevron = document.getElementById(chevronId);
+            
+            if (dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+                chevron.classList.remove('rotated');
+            } else {
+                dropdown.classList.add('show');
+                chevron.classList.add('rotated');
+            }
+        }
+
+        function closeAllDropdowns() {
+            const dropdowns = document.querySelectorAll('.custom-dropdown-content');
+            const chevrons = document.querySelectorAll('.chevron-icon');
+            
+            dropdowns.forEach(dropdown => dropdown.classList.remove('show'));
+            chevrons.forEach(chevron => chevron.classList.remove('rotated'));
+        }
+
+        // Modal Management
+        function showModal(modalId) {
+            const overlay = document.getElementById(modalId + 'Overlay');
+            if (overlay) {
+                overlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+            closeAllDropdowns();
+        }
+
+        function hideModal(overlayId) {
+            const overlay = document.getElementById(overlayId);
+            if (overlay) {
+                overlay.classList.remove('show');
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Purchase Modal Functions
+        function showPurchaseModal(planName, price) {
+            currentPlan = planName;
+            currentPrice = price;
+            currentOrderId = generateOrderId();
+            
+            document.getElementById('purchasePlanName').textContent = planName;
+            document.getElementById('purchasePlanPrice').textContent = price;
+            document.getElementById('orderIdField').value = currentOrderId;
+            
+            // Reset form
+            document.getElementById('purchaseEmail').value = '';
+            document.getElementById('discordUsername').value = '';
+            document.getElementById('selectedPaymentMethod').textContent = 'Select payment method';
+            selectedPaymentMethod = '';
+            
+            showModal('purchaseModal');
+            closeAllDropdowns();
+        }
+
+        function generateOrderId() {
+            const prefix = 'CEL';
+            const timestamp = Date.now().toString().slice(-6);
+            const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+            return `${prefix}-${timestamp}-${random}`;
+        }
+
+        function copyOrderId() {
+            const orderIdField = document.getElementById('orderIdField');
+            orderIdField.select();
+            document.execCommand('copy');
+            
+            // Visual feedback
+            const copyBtn = document.querySelector('.copy-btn');
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5"/></svg>Copied!';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+            }, 2000);
+        }
+
+        function copySuccessOrderId() {
+            const orderIdText = document.getElementById('successOrderId').textContent;
+            navigator.clipboard.writeText(orderIdText).then(() => {
+                const copyBtn = document.querySelector('.copy-btn-small');
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Payment Dropdown
+        function togglePaymentDropdown() {
+            const dropdown = document.getElementById('paymentDropdownContent');
+            const chevron = document.getElementById('paymentChevron');
+            
+            if (dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+                chevron.classList.remove('rotated');
+            } else {
+                dropdown.classList.add('show');
+                chevron.classList.add('rotated');
+            }
+        }
+
+        function selectPaymentMethod(method, icon) {
+            selectedPaymentMethod = method;
+            document.getElementById('selectedPaymentMethod').innerHTML = `<span class="payment-icon">${icon}</span> ${method}`;
+            document.getElementById('paymentDropdownContent').classList.remove('show');
+            document.getElementById('paymentChevron').classList.remove('rotated');
+        }
+
+        // Purchase Form Handling
+        function handlePurchase(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('purchaseEmail').value;
+            const discord = document.getElementById('discordUsername').value;
+            
+            if (!selectedPaymentMethod) {
+                alert('Please select a payment method');
+                return;
+            }
+            
+            // Show confirmation modal
+            document.getElementById('confirmPlanName').textContent = currentPlan;
+            document.getElementById('confirmPlanPrice').textContent = currentPrice + '/month';
+            document.getElementById('confirmEmail').textContent = email;
+            document.getElementById('confirmDiscord').textContent = discord;
+            document.getElementById('confirmPayment').textContent = selectedPaymentMethod;
+            document.getElementById('confirmOrderId').textContent = currentOrderId;
+            
+            hideModal('purchaseModalOverlay');
+            showModal('confirmationModal');
+        }
+
+        function processPurchase() {
+            // Simulate processing
+            hideModal('confirmationModalOverlay');
+            
+            // Show success modal
+            document.getElementById('successPlanName').textContent = currentPlan;
+            document.getElementById('successOrderId').textContent = currentOrderId;
+            
+            showModal('successModal');
+        }
+
+        // Login Form Handling
+        function handleLogin(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const rememberMe = document.querySelector('#loginModal input[type="checkbox"]').checked;
+
+            console.log('Attempting login...');
+            console.log('Email:', email);
+            console.log('Password:', password);
+            console.log('Remember Me:', rememberMe);
+
+            // Simulate API call or authentication logic
+            // In a real application, you would send this data to your backend
+            // using fetch() or XMLHttpRequest.
+
+            if (email === 'test@example.com' && password === 'password123') {
+                alert('Login successful!');
+                hideModal('loginModalOverlay');
+                // Redirect or update UI upon successful login
+            } else {
+                alert('Invalid email or password.');
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize 3D background
+            create3DBackground();
+            
+            // Load saved theme
+            const savedTheme = localStorage.getItem('celestial-theme') || 'default';
+            changeTheme(savedTheme);
+            
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.nav-dropdown') && !event.target.closest('.payment-dropdown')) {
+                    closeAllDropdowns();
+                    
+                    // Close payment dropdown
+                    const paymentDropdown = document.getElementById('paymentDropdownContent');
+                    const paymentChevron = document.getElementById('paymentChevron');
+                    if (paymentDropdown) {
+                        paymentDropdown.classList.remove('show');
+                        paymentChevron.classList.remove('rotated');
+                    }
+                }
+            });
+            
+            // Close modals when clicking overlay
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', function(event) {
+                    if (event.target === overlay) {
+                        hideModal(overlay.id);
+                    }
+                });
+            });
+            
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+            
+            // Fade in animation on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+            
+            document.querySelectorAll('.fade-in').forEach(el => {
+                observer.observe(el);
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Escape key closes modals
+            if (event.key === 'Escape') {
+                const openModal = document.querySelector('.modal-overlay.show');
+                if (openModal) {
+                    hideModal(openModal.id);
+                }
+                closeAllDropdowns();
+            }
+        });
+    </script>
+
+<script>
+function loginUserFromModal() {
+  const username = document.getElementById("modalLoginUsername").value;
+  if (username) {
+    localStorage.setItem("loggedInUser", username);
+    document.querySelector(".nav-dropdown:has(#loginDropdown)").style.display = "none";
+    document.getElementById("thankYouBanner").innerHTML = `Thanks for visiting, <strong>${username}</strong>`;
+    document.getElementById("thankYouBanner").style.display = "block";
+    hideModal('loginModal');
+  }
+}
+
+function registerUserFromModal() {
+  const newUsername = document.getElementById("modalRegisterUsername").value;
+  if (newUsername) {
+    alert("Registration successful! Please login.");
+    hideModal('registerModal');
+    showModal('loginModal');
+  }
+}
+
+window.onload = function () {
+  const savedUser = localStorage.getItem("loggedInUser");
+  if (savedUser) {
+    document.querySelector(".nav-dropdown:has(#loginDropdown)").style.display = "none";
+    document.getElementById("thankYouBanner").innerHTML = `Thanks for visiting, <strong>${savedUser}</strong>`;
+    document.getElementById("thankYouBanner").style.display = "block";
+  }
+};
+</script>
+
+</body>
+</html>
