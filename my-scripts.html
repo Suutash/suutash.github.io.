@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxia Gateway - My Scripts</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #581c87 0%, #7c2d92 50%, #ec4899 100%);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Network Canvas */
+        #networkCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Floating stars */
+        .star {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.6;
+            z-index: 10;
+            animation: float 20s linear infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) scale(1); opacity: 0.6; }
+            100% { transform: translateY(-2000px) scale(0.5); opacity: 0; }
+        }
+
+        .star:nth-child(1) { top: 10%; left: 20%; animation-delay: 0s; }
+        .star:nth-child(2) { top: 20%; left: 80%; animation-delay: 2s; }
+        .star:nth-child(3) { top: 50%; left: 40%; animation-delay: 4s; }
+        .star:nth-child(4) { top: 70%; left: 60%; animation-delay: 6s; }
+        .star:nth-child(5) { top: 90%; left: 10%; animation-delay: 8s; }
+
+        /* Main container */
+        .dashboard-container {
+            position: relative;
+            z-index: 20;
+            display: flex;
+            height: 100vh;
+            transition: all 0.3s ease;
+        }
+
+        /* Sidebar styles (same as other pages) */
+        .sidebar {
+            width: 288px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            margin: 16px;
+            margin-right: 0;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .sidebar.minimized {
+            width: 80px;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar.minimized .sidebar-header {
+            padding: 16px;
+            justify-content: center;
+        }
+
+        .sidebar-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(45deg, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.minimized .sidebar-title {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            padding: 8px;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #d1d5db;
+            transition: all 0.2s ease;
+            position: relative;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .sidebar.minimized .menu-item {
+            justify-content: center;
+            padding: 12px 8px;
+        }
+
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+        .sidebar.minimized .menu-item:hover {
+            transform: translateX(0) scale(1.05);
+        }
+
+        .menu-item.active {
+            background: rgba(168, 85, 247, 0.2);
+            color: #ffffff;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);
+        }
+
+        .menu-item.active .icon {
+            color: #a855f7;
+        }
+
+        .menu-item.logout {
+            color: #a855f7;
+        }
+
+        .menu-item-text {
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.minimized .menu-item-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        /* Tooltip for minimized sidebar */
+        .tooltip {
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            margin-left: 8px;
+            z-index: 1000;
+        }
+
+        .sidebar.minimized .menu-item:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Minimize button */
+        .minimize-btn {
+            position: absolute;
+            bottom: 24px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            background: rgba(168, 85, 247, 0.2);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .minimize-btn:hover {
+            background: rgba(168, 85, 247, 0.3);
+            transform: scale(1.1);
+        }
+
+        .minimize-btn .icon {
+            color: #a855f7;
+            transition: transform 0.3s ease;
+            width: 16px;
+            height: 16px;
+        }
+
+        .sidebar.minimized .minimize-btn .icon {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            margin: 16px;
+            margin-left: 0;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 24px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: margin-left 0.3s ease;
+        }
+
+        .sidebar.minimized ~ .main-content {
+            margin-left: -208px;
+        }
+
+        .content-area {
+            padding: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .hero-content {
+            position: relative;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 32px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-description {
+            color: #9ca3af;
+            font-size: 16px;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 24px 0;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #a855f7, #ec4899);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .scripts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .script-card {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 0;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .script-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(168, 85, 247, 0.3);
+            box-shadow: 0 12px 30px rgba(168, 85, 247, 0.15);
+        }
+
+        .script-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .script-info {
+            flex: 1;
+        }
+
+        .script-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .script-meta {
+            color: #9ca3af;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .script-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            padding: 8px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-icon.danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .script-body {
+            padding: 20px;
+        }
+
+        .script-description {
+            color: #d1d5db;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .script-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        .script-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .script-tag {
+            padding: 4px 8px;
+            background: rgba(168, 85, 247, 0.2);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 6px;
+            color: #e9d5ff;
+            font-size: 12px;
+        }
+
+        .script-footer {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #9ca3af;
+        }
+
+        .empty-state h3 {
+            font-size: 24px;
+            margin-bottom: 12px;
+            color: white;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        /* Icons */
+        .icon {
+            width: 20px;
+            height: 20px;
+            color: #d1d5db;
+            flex-shrink: 0;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            z-index: 1000;
+            transform: translateX(100%);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .scripts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: fixed;
+                z-index: 40;
+                height: calc(100% - 32px);
+            }
+
+            .sidebar.minimized {
+                width: 60px;
+            }
+
+            .main-content {
+                margin-left: 16px;
+            }
+
+            .sidebar.minimized ~ .main-content {
+                margin-left: 16px;
+            }
+
+            .content-area {
+                padding: 16px;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 16px;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Network Canvas -->
+    <canvas id="networkCanvas"></canvas>
+
+    <!-- Floating stars -->
+    <div class="star"></div>
+    <div class="star"></div>
+    <div class="star"></div>
+    <div class="star"></div>
+    <div class="star"></div>
+
+    <!-- Main Dashboard -->
+    <div class="dashboard-container" id="mainDashboard">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i data-lucide="zap" class="icon"></i>
+                <span class="sidebar-title">Galaxia Gateway</span>
+            </div>
+            
+            <div class="sidebar-menu">
+                <div class="menu-item" data-page="dashboard">
+                    <i data-lucide="layout-dashboard" class="icon"></i> 
+                    <span class="menu-item-text">Dashboard</span>
+                    <div class="tooltip">Dashboard</div>
+                </div>
+                <div class="menu-item" data-page="games">
+                    <i data-lucide="gamepad-2" class="icon"></i> 
+                    <span class="menu-item-text">Games</span>
+                    <div class="tooltip">Games</div>
+                </div>
+                <div class="menu-item" data-page="executor">
+                    <i data-lucide="terminal" class="icon"></i> 
+                    <span class="menu-item-text">Executor</span>
+                    <div class="tooltip">Executor</div>
+                </div>
+                <div class="menu-item" data-page="script-hub">
+                    <i data-lucide="code" class="icon"></i> 
+                    <span class="menu-item-text">Script Hub</span>
+                    <div class="tooltip">Script Hub</div>
+                </div>
+                <div class="menu-item active" data-page="my-scripts">
+                    <i data-lucide="file-text" class="icon"></i> 
+                    <span class="menu-item-text">My Scripts</span>
+                    <div class="tooltip">My Scripts</div>
+                </div>
+                <div class="menu-item" data-page="whitelist">
+                    <i data-lucide="shield-check" class="icon"></i> 
+                    <span class="menu-item-text">Whitelist</span>
+                    <div class="tooltip">Whitelist</div>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="menu-item logout" onclick="logout()">
+                    <i data-lucide="log-out" class="icon"></i> 
+                    <span class="menu-item-text">Logout</span>
+                    <div class="tooltip">Logout</div>
+                </div>
+            </div>
+
+            <button class="minimize-btn" id="minimizeBtn" onclick="toggleSidebar()">
+                <i data-lucide="chevron-left" class="icon"></i>
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-area" id="contentArea">
+                <div class="hero-content">
+                    <h1 class="page-title">
+                        <i data-lucide="file-text" style="width: 32px; height: 32px; color: #a855f7;"></i>
+                        My Scripts
+                    </h1>
+                    <p class="page-description">Manage your personal script collection and create new scripts.</p>
+                </div>
+
+                <div class="header-actions">
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-primary" onclick="createNewScript()">
+                            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                            New Script
+                        </button>
+                        <button class="btn btn-secondary" onclick="importScript()">
+                            <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
+                            Import
+                        </button>
+                    </div>
+                    <div style="color: #9ca3af; font-size: 14px;">
+                        <span id="scriptCount">0</span> scripts total
+                    </div>
+                </div>
+
+                <div class="scripts-container" id="scriptsContainer">
+                    <!-- Scripts will be populated here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <div class="toast-content" id="toastContent"></div>
+    </div>
+
+    <script>
+        // Whitelist - Must match other pages
+        const WHITELIST = [
+            'MARCNATHAN12121',
+            'TNTS_MISSEDYOURSHOT', 
+            'ANOTHERDAY',
+            'GALAXIA_USER',
+            'ROBLOX_MASTER',
+            'helloguys',
+            'admin',
+            'testuser',
+            'developer'
+        ];
+
+        // Sample user scripts
+        let USER_SCRIPTS = [
+            {
+                id: 1,
+                title: 'My Auto Farm',
+                description: 'Custom auto-farming script for my favorite game with advanced features.',
+                tags: ['roblox', 'farming', 'custom'],
+                created: '2025-01-10',
+                modified: '2025-01-15',
+                size: '2.4 KB',
+                executions: 47,
+                status: 'active'
+            },
+            {
+                id: 2,
+                title: 'Speed Booster',
+                description: 'Personal speed enhancement script with configurable multipliers.',
+                tags: ['roblox', 'speed', 'utility'],
+                created: '2025-01-08',
+                modified: '2025-01-12',
+                size: '1.8 KB',
+                executions: 23,
+                status: 'active'
+            },
+            {
+                id: 3,
+                title: 'Teleport Manager',
+                description: 'Advanced teleportation system with saved locations and hotkeys.',
+                tags: ['roblox', 'teleport', 'navigation'],
+                created: '2025-01-05',
+                modified: '2025-01-05',
+                size: '3.1 KB',
+                executions: 12,
+                status: 'draft'
+            }
+        ];
+
+        // Network Animation Class (same as other pages)
+        class NetworkAnimation {
+            constructor() {
+                this.canvas = document.getElementById('networkCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.nodes = [];
+                this.mouse = { x: 0, y: 0 };
+                this.maxNodes = 50;
+                this.maxDistance = 150;
+                
+                this.init();
+                this.animate();
+            }
+
+            init() {
+                this.resize();
+                this.createNodes();
+                
+                window.addEventListener('resize', () => this.resize());
+                document.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            createNodes() {
+                this.nodes = [];
+                for (let i = 0; i < this.maxNodes; i++) {
+                    this.nodes.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        radius: Math.random() * 2 + 1
+                    });
+                }
+            }
+
+            drawNode(node) {
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = 'rgba(168, 85, 247, 0.8)';
+                this.ctx.fill();
+            }
+
+            drawConnection(node1, node2, distance) {
+                const opacity = 1 - (distance / this.maxDistance);
+                this.ctx.beginPath();
+                this.ctx.moveTo(node1.x, node1.y);
+                this.ctx.lineTo(node2.x, node2.y);
+                this.ctx.strokeStyle = `rgba(168, 85, 247, ${opacity * 0.3})`;
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+            }
+
+            updateNodes() {
+                this.nodes.forEach(node => {
+                    node.x += node.vx;
+                    node.y += node.vy;
+
+                    if (node.x < 0 || node.x > this.canvas.width) node.vx *= -1;
+                    if (node.y < 0 || node.y > this.canvas.height) node.vy *= -1;
+
+                    node.x = Math.max(0, Math.min(this.canvas.width, node.x));
+                    node.y = Math.max(0, Math.min(this.canvas.height, node.y));
+                });
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.updateNodes();
+                
+                for (let i = 0; i < this.nodes.length; i++) {
+                    for (let j = i + 1; j < this.nodes.length; j++) {
+                        const dx = this.nodes[i].x - this.nodes[j].x;
+                        const dy = this.nodes[i].y - this.nodes[j].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < this.maxDistance) {
+                            this.drawConnection(this.nodes[i], this.nodes[j], distance);
+                        }
+                    }
+                }
+                
+                this.nodes.forEach(node => this.drawNode(node));
+                
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Global state
+        let sidebarMinimized = false;
+        let currentUser = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+            new NetworkAnimation();
+            setupEventListeners();
+            checkAccess();
+            renderScripts();
+        });
+
+        function setupEventListeners() {
+            document.querySelectorAll('.sidebar-menu .menu-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const page = this.getAttribute('data-page');
+                    if (page) {
+                        navigateToPage(page);
+                    }
+                });
+            });
+        }
+
+        function checkAccess() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('username');
+            const userId = urlParams.get('userId');
+
+            if (!username || !userId || !WHITELIST.includes(username)) {
+                // Access denied - redirect to login
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Access granted - load user data
+            currentUser = {
+                username: username,
+                id: userId,
+                displayName: urlParams.get('displayName') || username,
+                avatarLetter: urlParams.get('avatarLetter') || username.charAt(0).toUpperCase(),
+                isDemoMode: urlParams.get('isDemoMode') === 'true'
+            };
+
+            showToast(`My Scripts loaded for ${username}`);
+        }
+
+        function renderScripts() {
+            const container = document.getElementById('scriptsContainer');
+            const countElement = document.getElementById('scriptCount');
+            
+            countElement.textContent = USER_SCRIPTS.length;
+
+            if (USER_SCRIPTS.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <i data-lucide="file-plus" style="width: 64px; height: 64px; margin: 0 auto 16px; display: block; color: #9ca3af;"></i>
+                        <h3>No scripts yet</h3>
+                        <p>Create your first script to get started with automation.</p>
+                        <button class="btn btn-primary" onclick="createNewScript()">
+                            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                            Create New Script
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = '';
+
+            USER_SCRIPTS.forEach(script => {
+                const scriptCard = document.createElement('div');
+                scriptCard.className = 'script-card';
+                
+                const statusColor = script.status === 'active' ? '#10b981' : '#f59e0b';
+                const statusText = script.status === 'active' ? 'Active' : 'Draft';
+                
+                scriptCard.innerHTML = `
+                    <div class="script-header">
+                        <div class="script-info">
+                            <div class="script-title">
+                                <i data-lucide="file-code" style="width: 18px; height: 18px; color: #a855f7;"></i>
+                                ${script.title}
+                            </div>
+                            <div class="script-meta">
+                                <span style="color: ${statusColor};">● ${statusText}</span>
+                                <span>Modified ${script.modified}</span>
+                            </div>
+                        </div>
+                        <div class="script-actions">
+                            <button class="btn-icon" onclick="editScript(${script.id})" title="Edit">
+                                <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
+                            </button>
+                            <button class="btn-icon" onclick="duplicateScript(${script.id})" title="Duplicate">
+                                <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
+                            </button>
+                            <button class="btn-icon danger" onclick="deleteScript(${script.id})" title="Delete">
+                                <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="script-body">
+                        <div class="script-description">${script.description}</div>
+                        <div class="script-stats">
+                            <div class="stat-item">
+                                <i data-lucide="hard-drive" style="width: 12px; height: 12px;"></i>
+                                ${script.size}
+                            </div>
+                            <div class="stat-item">
+                                <i data-lucide="play-circle" style="width: 12px; height: 12px;"></i>
+                                ${script.executions} runs
+                            </div>
+                            <div class="stat-item">
+                                <i data-lucide="calendar" style="width: 12px; height: 12px;"></i>
+                                ${script.created}
+                            </div>
+                        </div>
+                        <div class="script-tags">
+                            ${script.tags.map(tag => `<span class="script-tag">${tag}</span>`).join('')}
+                        </div>
+                        <div class="script-footer">
+                            <button class="btn btn-primary btn-small" onclick="runScript(${script.id})">
+                                <i data-lucide="play" style="width: 12px; height: 12px;"></i>
+                                Run
+                            </button>
+                            <button class="btn btn-secondary btn-small" onclick="exportScript(${script.id})">
+                                <i data-lucide="download" style="width: 12px; height: 12px;"></i>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(scriptCard);
+            });
+
+            lucide.createIcons();
+        }
+
+        function createNewScript() {
+            showToast('Opening script editor...');
+            // In a real app, this would open a script editor
+            setTimeout(() => {
+                const newScript = {
+                    id: Date.now(),
+                    title: 'New Script',
+                    description: 'A new script ready for customization.',
+                    tags: ['custom'],
+                    created: new Date().toISOString().split('T')[0],
+                    modified: new Date().toISOString().split('T')[0],
+                    size: '0.5 KB',
+                    executions: 0,
+                    status: 'draft'
+                };
+                USER_SCRIPTS.unshift(newScript);
+                renderScripts();
+                showToast('New script created!');
+            }, 1000);
+        }
+
+        function importScript() {
+            showToast('Import functionality coming soon...');
+        }
+
+        function editScript(scriptId) {
+            const script = USER_SCRIPTS.find(s => s.id === scriptId);
+            if (script) {
+                showToast(`Opening ${script.title} for editing...`);
+            }
+        }
+
+        function runScript(scriptId) {
+            const script = USER_SCRIPTS.find(s => s.id === scriptId);
+            if (script) {
+                script.executions++;
+                renderScripts();
+                showToast(`Running ${script.title}...`);
+            }
+        }
+
+        function duplicateScript(scriptId) {
+            const script = USER_SCRIPTS.find(s => s.id === scriptId);
+            if (script) {
+                const duplicate = {
+                    ...script,
+                    id: Date.now(),
+                    title: `${script.title} (Copy)`,
+                    created: new Date().toISOString().split('T')[0],
+                    modified: new Date().toISOString().split('T')[0],
+                    executions: 0
+                };
+                USER_SCRIPTS.unshift(duplicate);
+                renderScripts();
+                showToast(`${script.title} duplicated!`);
+            }
+        }
+
+        function exportScript(scriptId) {
+            const script = USER_SCRIPTS.find(s => s.id === scriptId);
+            if (script) {
+                showToast(`Exporting ${script.title}...`);
+            }
+        }
+
+        function deleteScript(scriptId) {
+            const script = USER_SCRIPTS.find(s => s.id === scriptId);
+            if (script && confirm(`Are you sure you want to delete "${script.title}"?`)) {
+                USER_SCRIPTS = USER_SCRIPTS.filter(s => s.id !== scriptId);
+                renderScripts();
+                showToast(`${script.title} deleted`);
+            }
+        }
+
+        function navigateToPage(page) {
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Create URL with authentication parameters
+            const params = new URLSearchParams({
+                username: currentUser.username,
+                userId: currentUser.id,
+                displayName: currentUser.displayName,
+                avatarLetter: currentUser.avatarLetter,
+                isDemoMode: currentUser.isDemoMode
+            });
+
+            // Navigate to the appropriate page
+            let targetUrl;
+            switch(page) {
+                case 'dashboard':
+                    targetUrl = `dashboard.html?${params.toString()}`;
+                    break;
+                case 'games':
+                    targetUrl = `games.html?${params.toString()}`;
+                    break;
+                case 'executor':
+                    targetUrl = `executor.html?${params.toString()}`;
+                    break;
+                case 'script-hub':
+                    targetUrl = `script-hub.html?${params.toString()}`;
+                    break;
+                case 'my-scripts':
+                    targetUrl = `my-scripts.html?${params.toString()}`;
+                    break;
+                case 'whitelist':
+                    targetUrl = `whitelist.html?${params.toString()}`;
+                    break;
+                default:
+                    targetUrl = `dashboard.html?${params.toString()}`;
+            }
+
+            showToast(`Loading ${page}...`);
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 500);
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            
+            sidebarMinimized = !sidebarMinimized;
+            
+            if (sidebarMinimized) {
+                sidebar.classList.add('minimized');
+            } else {
+                sidebar.classList.remove('minimized');
+            }
+            
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 100);
+        }
+
+        function logout() {
+            showToast('Logging out...');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1000);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const content = document.getElementById('toastContent');
+            
+            content.innerHTML = `<i data-lucide="check-circle" style="width: 16px; height: 16px; color: #10b981; margin-right: 8px;"></i> ${message}`;
+            
+            lucide.createIcons();
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxia Gateway - Login</title>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.2s ease-in-out;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #3c1053 0%, #ad5389 100%);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Network Canvas */
+        #networkCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Roblox Username Modal */
+        .roblox-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .roblox-modal.hidden {
+            display: none;
+        }
+
+        .roblox-modal-content {
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .roblox-modal h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #8b5cf6, #d946ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .roblox-modal p {
+            color: #d1d5db;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .roblox-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .roblox-input {
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.5rem;
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .roblox-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .roblox-btn {
+            padding: 0.75rem 1.5rem;
+            background: #000000;
+            color: white;
+            border: 1px solid #ffffff;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .roblox-btn:hover {
+            background: #ffffff;
+            color: #000000;
+            transform: translateY(-1px);
+        }
+
+        .roblox-btn:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .roblox-btn-secondary {
+            background: transparent;
+            border: 1px solid #ffffff;
+            color: #ffffff;
+        }
+
+        .roblox-btn-secondary:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .roblox-error {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .roblox-success {
+            color: #10b981;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .roblox-profile {
+            display: none;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .roblox-profile.show {
+            display: block;
+        }
+
+        .roblox-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            border: 3px solid #8b5cf6;
+            background: linear-gradient(45deg, #8b5cf6, #d946ef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            object-fit: cover;
+        }
+
+        .roblox-username {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .roblox-display-name {
+            font-size: 1rem;
+            color: #d1d5db;
+            margin-bottom: 0.5rem;
+        }
+
+        .roblox-user-id {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .demo-notice {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            color: #c084fc;
+        }
+
+        /* Visit Dashboard Popup */
+        .visit-dashboard-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(15px);
+        }
+
+        .visit-dashboard-popup.hidden {
+            display: none;
+        }
+
+        .popup-content {
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            padding: 3rem;
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .popup-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #8b5cf6, #d946ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .popup-subtitle {
+            color: #d1d5db;
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .visit-btn {
+            padding: 1rem 2rem;
+            background: #000000;
+            color: white;
+            border: 2px solid #ffffff;
+            border-radius: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .visit-btn:hover {
+            background: #ffffff;
+            color: #000000;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Welcome Dashboard Popup */
+        .welcome-dashboard-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(15px);
+        }
+
+        .welcome-dashboard-popup.hidden {
+            display: none;
+        }
+
+        .welcome-popup-content {
+            background: rgba(40, 40, 40, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            text-align: center;
+            max-width: 700px;
+            width: 90%;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .welcome-user-info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .welcome-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 4px solid #8b5cf6;
+            background: linear-gradient(45deg, #8b5cf6, #d946ef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .welcome-user-details h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #8b5cf6, #d946ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-user-details p {
+            color: #9ca3af;
+            font-size: 1.125rem;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #8b5cf6, #d946ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .welcome-subtitle {
+            color: #9ca3af;
+            font-size: 1.125rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .welcome-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .start-now-btn {
+            padding: 1rem 2.5rem;
+            background: #000000;
+            color: white;
+            border: 2px solid #ffffff;
+            border-radius: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .start-now-btn:hover {
+            background: #ffffff;
+            color: #000000;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .change-user-btn {
+            padding: 1rem 2rem;
+            background: transparent;
+            color: #ffffff;
+            border: 2px solid #ffffff;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .change-user-btn:hover {
+            background: #ffffff;
+            color: #000000;
+            transform: translateY(-1px);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Gradient text elements */
+        h1, h2, h3, h4, .gradient-text {
+            background: linear-gradient(45deg, #8b5cf6, #d946ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Floating stars */
+        .star {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            animation: floatStar 20s linear infinite;
+            opacity: 0.6;
+            z-index: 2;
+        }
+
+        @keyframes floatStar {
+            0% { transform: translateY(0) scale(1); opacity: 0.6; }
+            100% { transform: translateY(-2000px) scale(0.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+<!-- Network Canvas -->
+<canvas id="networkCanvas"></canvas>
+
+<!-- Floating stars -->
+<div class="star" style="top: 10%; left: 20%; animation-delay: 0s;"></div>
+<div class="star" style="top: 20%; left: 80%; animation-delay: 2s;"></div>
+<div class="star" style="top: 50%; left: 40%; animation-delay: 4s;"></div>
+<div class="star" style="top: 70%; left: 60%; animation-delay: 6s;"></div>
+<div class="star" style="top: 90%; left: 10%; animation-delay: 8s;"></div>
+
+<!-- Visit Dashboard Popup -->
+<div class="visit-dashboard-popup hidden" id="visitDashboardPopup">
+    <div class="popup-content">
+        <h1 class="popup-title">🚀 Visit Dashboard</h1>
+        <p class="popup-subtitle">Ready to explore the Galaxia Gateway?</p>
+        <button class="visit-btn" onclick="showWelcomeDashboard()">
+            <i data-lucide="external-link" class="icon"></i>
+            Visit Dashboard
+        </button>
+    </div>
+</div>
+
+<!-- Welcome Dashboard Popup -->
+<div class="welcome-dashboard-popup hidden" id="welcomeDashboardPopup">
+    <div class="welcome-popup-content">
+        <div class="welcome-user-info">
+            <div class="welcome-avatar" id="welcomeAvatar">
+                U
+            </div>
+            <div class="welcome-user-details">
+                <h1 id="welcomeUsername">Welcome, User!</h1>
+                <p id="welcomeUserInfo">User ID: 000000000</p>
+            </div>
+        </div>
+        
+        <h2 class="welcome-title">Welcome to Galaxia Gateway Dashboard!</h2>
+        <p class="welcome-subtitle">Your gateway to advanced serverside scripting</p>
+        
+        <div class="welcome-buttons">
+            <button class="start-now-btn" onclick="redirectToDashboard()">
+                <i data-lucide="rocket" class="icon"></i>
+                Start Now
+            </button>
+            <button class="change-user-btn" onclick="changeUser()">
+                <i data-lucide="refresh-cw" class="icon"></i>
+                Change User
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Roblox Username Modal -->
+<div class="roblox-modal" id="robloxModal">
+    <div class="roblox-modal-content">
+        <h2>🚀 Enter Your Roblox Username</h2>
+        <p>Please enter your Roblox username to access the Galaxia Gateway Dashboard</p>
+        
+        <div class="demo-notice">
+            <strong>Demo Mode Available:</strong> Due to CORS restrictions, you can use demo mode for instant access.
+        </div>
+        
+        <div class="roblox-input-group">
+            <input 
+                type="text" 
+                class="roblox-input" 
+                id="robloxUsernameInput" 
+                placeholder="Enter your Roblox username..."
+                maxlength="20"
+                value="MARCNATHAN12121"
+            >
+            <div class="button-group">
+                <button class="roblox-btn" id="fetchProfileBtn" onclick="fetchRobloxProfile()">
+                    <i data-lucide="user" class="icon"></i>
+                    <span id="fetchBtnText">Fetch Profile</span>
+                </button>
+                <button class="roblox-btn roblox-btn-secondary" onclick="useDemoMode()">
+                    <i data-lucide="play" class="icon"></i>
+                    Demo Mode
+                </button>
+            </div>
+        </div>
+        
+        <div class="roblox-error" id="robloxError"></div>
+        <div class="roblox-success" id="robloxSuccess"></div>
+        
+        <div class="roblox-profile" id="robloxProfile">
+            <div class="roblox-avatar" id="robloxAvatar">
+                <i data-lucide="user" style="width: 2rem; height: 2rem;"></i>
+            </div>
+            <div class="roblox-username" id="robloxDisplayUsername"></div>
+            <div class="roblox-display-name" id="robloxDisplayName"></div>
+            <div class="roblox-user-id" id="robloxUserId"></div>
+            <button class="roblox-btn" onclick="continueToApp()">
+                <i data-lucide="arrow-right" class="icon"></i>
+                Continue to Dashboard
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div style="position: fixed; bottom: 2rem; right: 2rem; background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 0.5rem; padding: 1rem; z-index: 1000; transform: translateX(100%); opacity: 0; transition: all 0.3s ease;" id="toast">
+    <div id="toastContent"></div>
+</div>
+
+<script>
+    let currentRobloxUser = null;
+
+    // Demo user data with GIF meme profiles
+    const demoUsers = {
+        'MARCNATHAN12121': {
+            id: 448618588,
+            username: 'MARCNATHAN12121',
+            displayName: 'MARCNATHAN12121',
+            description: 'Demo user profile',
+            created: '2024-01-01T00:00:00.000Z',
+            avatarUrl: 'https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif', // Thinking meme
+            avatarLetter: 'M'
+        },
+        'TNTS_MISSEDYOURSHOT': {
+            id: 8020653658,
+            username: 'TNTS_MissedYourShot',
+            displayName: 'TNTS_MissedYourShot',
+            description: 'Demo user profile',
+            created: '2024-01-01T00:00:00.000Z',
+            avatarUrl: 'https://media.giphy.com/media/l3q2K5jinAlChoCLS/giphy.gif', // Surprised Pikachu
+            avatarLetter: 'T'
+        },
+        'ANOTHERDAY': {
+            id: 197374737,
+            username: 'ANOTHERDAY',
+            displayName: 'ANOTHERDAY',
+            description: 'Demo user profile',
+            created: '2024-01-01T00:00:00.000Z',
+            avatarUrl: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif', // Success kid
+            avatarLetter: 'A'
+        },
+        'GALAXIA_USER': {
+            id: 123456789,
+            username: 'GALAXIA_USER',
+            displayName: 'GALAXIA_USER',
+            description: 'Demo user profile',
+            created: '2024-01-01T00:00:00.000Z',
+            avatarUrl: 'https://media.giphy.com/media/3o7aCSPqXE5C6T8tBC/giphy.gif', // Dancing cat
+            avatarLetter: 'G'
+        },
+        'ROBLOX_MASTER': {
+            id: 987654321,
+            username: 'ROBLOX_MASTER',
+            displayName: 'ROBLOX_MASTER',
+            description: 'Demo user profile',
+            created: '2024-01-01T00:00:00.000Z',
+            avatarUrl: 'https://media.giphy.com/media/YQitE4YNQNahy/giphy.gif', // Nyan cat
+            avatarLetter: 'R'
+        }
+    };
+
+    // Network Animation
+    class NetworkAnimation {
+        constructor() {
+            this.canvas = document.getElementById('networkCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.nodes = [];
+            this.mouse = { x: 0, y: 0 };
+            this.maxNodes = 50;
+            this.maxDistance = 150;
+            
+            this.init();
+            this.animate();
+        }
+
+        init() {
+            this.resize();
+            this.createNodes();
+            
+            window.addEventListener('resize', () => this.resize());
+            document.addEventListener('mousemove', (e) => {
+                this.mouse.x = e.clientX;
+                this.mouse.y = e.clientY;
+            });
+        }
+
+        resize() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+        }
+
+        createNodes() {
+            this.nodes = [];
+            for (let i = 0; i < this.maxNodes; i++) {
+                this.nodes.push({
+                    x: Math.random() * this.canvas.width,
+                    y: Math.random() * this.canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    radius: Math.random() * 2 + 1
+                });
+            }
+        }
+
+        drawNode(node) {
+            this.ctx.beginPath();
+            this.ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = 'rgba(139, 92, 246, 0.8)';
+            this.ctx.fill();
+        }
+
+        drawConnection(node1, node2, distance) {
+            const opacity = 1 - (distance / this.maxDistance);
+            this.ctx.beginPath();
+            this.ctx.moveTo(node1.x, node1.y);
+            this.ctx.lineTo(node2.x, node2.y);
+            this.ctx.strokeStyle = `rgba(139, 92, 246, ${opacity * 0.3})`;
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+        }
+
+        drawMouseConnections() {
+            this.nodes.forEach(node => {
+                const dx = this.mouse.x - node.x;
+                const dy = this.mouse.y - node.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < this.maxDistance) {
+                    const opacity = 1 - (distance / this.maxDistance);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(node.x, node.y);
+                    this.ctx.lineTo(this.mouse.x, this.mouse.y);
+                    this.ctx.strokeStyle = `rgba(217, 70, 239, ${opacity * 0.6})`;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                }
+            });
+        }
+
+        updateNodes() {
+            this.nodes.forEach(node => {
+                node.x += node.vx;
+                node.y += node.vy;
+
+                if (node.x < 0 || node.x > this.canvas.width) node.vx *= -1;
+                if (node.y < 0 || node.y > this.canvas.height) node.vy *= -1;
+
+                node.x = Math.max(0, Math.min(this.canvas.width, node.x));
+                node.y = Math.max(0, Math.min(this.canvas.height, node.y));
+            });
+        }
+
+        animate() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            this.updateNodes();
+            
+            // Draw connections between nodes
+            for (let i = 0; i < this.nodes.length; i++) {
+                for (let j = i + 1; j < this.nodes.length; j++) {
+                    const dx = this.nodes[i].x - this.nodes[j].x;
+                    const dy = this.nodes[i].y - this.nodes[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < this.maxDistance) {
+                        this.drawConnection(this.nodes[i], this.nodes[j], distance);
+                    }
+                }
+            }
+            
+            // Draw mouse connections
+            this.drawMouseConnections();
+            
+            // Draw nodes
+            this.nodes.forEach(node => this.drawNode(node));
+            
+            requestAnimationFrame(() => this.animate());
+        }
+    }
+
+    // Initialize the app
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+        new NetworkAnimation();
+        checkExistingUser();
+        
+        // Allow Enter key to fetch profile
+        document.getElementById('robloxUsernameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                fetchRobloxProfile();
+            }
+        });
+    });
+
+    // Check if user data already exists
+    function checkExistingUser() {
+        const storedUser = localStorage.getItem('galaxia_roblox_user');
+        if (storedUser) {
+            try {
+                currentRobloxUser = JSON.parse(storedUser);
+                showVisitDashboardPopup();
+            } catch (e) {
+                console.error('Error parsing stored user data:', e);
+                localStorage.removeItem('galaxia_roblox_user');
+            }
+        }
+    }
+
+    // Show visit dashboard popup
+    function showVisitDashboardPopup() {
+        const modal = document.getElementById('robloxModal');
+        const popup = document.getElementById('visitDashboardPopup');
+        
+        modal.classList.add('hidden');
+        popup.classList.remove('hidden');
+        
+        lucide.createIcons();
+    }
+
+    // Show welcome dashboard popup with user info
+    function showWelcomeDashboard() {
+        if (currentRobloxUser) {
+            const visitPopup = document.getElementById('visitDashboardPopup');
+            const welcomePopup = document.getElementById('welcomeDashboardPopup');
+            
+            // Update welcome popup with user data
+            const welcomeAvatar = document.getElementById('welcomeAvatar');
+            const welcomeUsername = document.getElementById('welcomeUsername');
+            const welcomeUserInfo = document.getElementById('welcomeUserInfo');
+            
+            // Set avatar - use GIF if available, otherwise use letter
+            if (currentRobloxUser.avatarUrl) {
+                welcomeAvatar.innerHTML = `<img src="${currentRobloxUser.avatarUrl}" alt="${currentRobloxUser.username}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            } else {
+                welcomeAvatar.textContent = currentRobloxUser.avatarLetter || currentRobloxUser.username.charAt(0).toUpperCase();
+            }
+            
+            welcomeUsername.textContent = `Welcome, ${currentRobloxUser.username}!`;
+            welcomeUserInfo.textContent = `User ID: ${currentRobloxUser.id}${currentRobloxUser.isDemoMode ? ' • Demo Mode' : ''}`;
+            
+            // Hide visit popup and show welcome popup
+            visitPopup.classList.add('hidden');
+            welcomePopup.classList.remove('hidden');
+            
+            lucide.createIcons();
+            showToast(`Welcome ${currentRobloxUser.username}!`, 'success');
+        }
+    }
+
+    // Redirect to dashboard with user data in URL parameters
+    function redirectToDashboard() {
+        if (currentRobloxUser) {
+            // Create URL parameters with user data
+            const params = new URLSearchParams({
+                username: currentRobloxUser.username,
+                userId: currentRobloxUser.id,
+                displayName: currentRobloxUser.displayName || currentRobloxUser.username,
+                avatarLetter: currentRobloxUser.avatarLetter || currentRobloxUser.username.charAt(0).toUpperCase(),
+                isDemoMode: currentRobloxUser.isDemoMode || false
+            });
+            
+            // Show loading message
+            showToast('Redirecting to dashboard...', 'info');
+            
+            // Redirect to dashboard.html with parameters after a short delay
+            setTimeout(() => {
+                window.location.href = `dashboard.html?${params.toString()}`;
+            }, 500);
+        } else {
+            showToast('No user data found. Please login first.', 'error');
+        }
+    }
+
+    // Change user function
+    function changeUser() {
+        localStorage.removeItem('galaxia_roblox_user');
+        currentRobloxUser = null;
+        
+        const welcomePopup = document.getElementById('welcomeDashboardPopup');
+        const modal = document.getElementById('robloxModal');
+        const profileDiv = document.getElementById('robloxProfile');
+        const usernameInput = document.getElementById('robloxUsernameInput');
+        const errorDiv = document.getElementById('robloxError');
+        const successDiv = document.getElementById('robloxSuccess');
+        
+        // Reset form
+        usernameInput.value = '';
+        errorDiv.textContent = '';
+        successDiv.textContent = '';
+        profileDiv.classList.remove('show');
+        
+        // Show modal and hide welcome popup
+        welcomePopup.classList.add('hidden');
+        modal.classList.remove('hidden');
+        
+        showToast('User data cleared. Please enter a new username.', 'info');
+    }
+
+    // Use demo mode with predefined user data
+    function useDemoMode() {
+        const usernameInput = document.getElementById('robloxUsernameInput');
+        const username = usernameInput.value.trim() || 'MARCNATHAN12121';
+        
+        // Check if we have demo data for this user
+        const demoUser = demoUsers[username] || demoUsers['MARCNATHAN12121'];
+        
+        currentRobloxUser = {
+            ...demoUser,
+            isDemoMode: true
+        };
+        
+        displayProfile(currentRobloxUser);
+        showSuccess('Demo profile loaded successfully!');
+    }
+
+    // Array of random meme GIFs for new users
+    const randomMemeGifs = [
+        'https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif', // Thinking
+        'https://media.giphy.com/media/l3q2K5jinAlChoCLS/giphy.gif', // Surprised Pikachu
+        'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif', // Success kid
+        'https://media.giphy.com/media/3o7aCSPqXE5C6T8tBC/giphy.gif', // Dancing cat
+        'https://media.giphy.com/media/YQitE4YNQNahy/giphy.gif', // Nyan cat
+        'https://media.giphy.com/media/3o6Zt4HU9uwXmXSAuI/giphy.gif', // Drake pointing
+        'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif', // Doge
+        'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif', // Pepe
+    ];
+
+    // Simulate fetching Roblox profile
+    async function fetchRobloxProfile() {
+        const usernameInput = document.getElementById('robloxUsernameInput');
+        const fetchBtn = document.getElementById('fetchProfileBtn');
+        const fetchBtnText = document.getElementById('fetchBtnText');
+        const errorDiv = document.getElementById('robloxError');
+        const successDiv = document.getElementById('robloxSuccess');
+        const profileDiv = document.getElementById('robloxProfile');
+        
+        const username = usernameInput.value.trim();
+        
+        // Clear previous messages
+        errorDiv.textContent = '';
+        successDiv.textContent = '';
+        profileDiv.classList.remove('show');
+        
+        if (!username) {
+            showError('Please enter a username');
+            return;
+        }
+        
+        // Show loading state
+        fetchBtn.disabled = true;
+        fetchBtnText.innerHTML = '<div class="loading-spinner"></div> Fetching...';
+        
+        // Simulate API call delay
+        setTimeout(() => {
+            try {
+                // For demo purposes, we'll create a user profile based on the input
+                const userId = Math.floor(Math.random() * 1000000000) + 1000000;
+                
+                currentRobloxUser = {
+                    id: userId,
+                    username: username,
+                    displayName: username,
+                    description: `Profile for ${username}`,
+                    created: new Date().toISOString(),
+                    avatarUrl: randomMemeGifs[Math.floor(Math.random() * randomMemeGifs.length)],
+                    avatarLetter: username.charAt(0).toUpperCase(),
+                    isDemoMode: false
+                };
+                
+                displayProfile(currentRobloxUser);
+                showSuccess('Profile fetched successfully!');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to fetch profile. Try demo mode instead.');
+            } finally {
+                // Reset button state
+                fetchBtn.disabled = false;
+                fetchBtnText.textContent = 'Fetch Profile';
+                lucide.createIcons();
+            }
+        }, 2000);
+    }
+
+    // Display the fetched profile
+    function displayProfile(user) {
+        const profileDiv = document.getElementById('robloxProfile');
+        const avatar = document.getElementById('robloxAvatar');
+        const username = document.getElementById('robloxDisplayUsername');
+        const displayName = document.getElementById('robloxDisplayName');
+        const userId = document.getElementById('robloxUserId');
+        
+        // Set avatar - use GIF if available, otherwise use letter
+        if (user.avatarUrl) {
+            avatar.innerHTML = `<img src="${user.avatarUrl}" alt="${user.username}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+        } else {
+            avatar.innerHTML = `<span style="font-size: 2rem; font-weight: bold;">${user.avatarLetter || user.username.charAt(0).toUpperCase()}</span>`;
+        }
+        
+        username.textContent = user.username + (user.isDemoMode ? ' (Demo)' : '');
+        displayName.textContent = user.displayName && user.displayName !== user.username ? 
+            `Display Name: ${user.displayName}` : '';
+        userId.textContent = `User ID: ${user.id}`;
+        
+        profileDiv.classList.add('show');
+        lucide.createIcons();
+    }
+
+    // Show error message
+    function showError(message) {
+        const errorDiv = document.getElementById('robloxError');
+        const successDiv = document.getElementById('robloxSuccess');
+        errorDiv.textContent = message;
+        successDiv.textContent = '';
+    }
+
+    // Show success message
+    function showSuccess(message) {
+        const errorDiv = document.getElementById('robloxError');
+        const successDiv = document.getElementById('robloxSuccess');
+        successDiv.textContent = message;
+        errorDiv.textContent = '';
+    }
+
+    // Continue to the main app
+    function continueToApp() {
+        if (currentRobloxUser) {
+            // Save user data to localStorage
+            localStorage.setItem('galaxia_roblox_user', JSON.stringify(currentRobloxUser));
+            showVisitDashboardPopup();
+        }
+    }
+
+    // Toast notification system
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const content = document.getElementById('toastContent');
+        
+        const icons = {
+            success: 'check-circle',
+            error: 'x-circle',
+            info: 'info'
+        };
+        
+        const colors = {
+            success: '#10b981',
+            error: '#ef4444',
+            info: '#8b5cf6'
+        };
+        
+        content.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${colors[type]};">
+                <i data-lucide="${icons[type]}" style="width: 1rem; height: 1rem;"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        lucide.createIcons();
+        
+        // Show toast
+        toast.style.transform = 'translateX(0)';
+        toast.style.opacity = '1';
+        
+        // Hide toast after 3 seconds
+        setTimeout(() => {
+            toast.style.transform = 'translateX(100%)';
+            toast.style.opacity = '0';
+        }, 3000);
+    }
+</script>
+
+</body>
+</html>
